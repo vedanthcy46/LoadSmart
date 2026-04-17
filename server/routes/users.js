@@ -89,30 +89,36 @@ router.post('/', authenticateToken, async (req, res) => {
 
 // Update user (Admin or Self)
 router.put('/:id', authenticateToken, async (req, res) => {
+  console.log(`[User Update Debug] Updating user: ${req.params.id}`);
   try {
     // Permission check: Admin or the user themselves
     if (req.user.role !== 'admin' && req.user.id !== req.params.id) {
+      console.log(`[User Update Debug] Access denied for user: ${req.user.id}`);
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    const { name, password, skills, capacity } = req.body;
+    const { name, password, skills, capacity, email } = req.body;
     const user = await User.findOne({ userId: req.params.id });
 
     if (!user) {
+      console.log(`[User Update Debug] User not found: ${req.params.id}`);
       return res.status(404).json({ error: 'User not found' });
     }
 
     if (name) user.name = name;
+    if (email) user.email = email;
     if (password) user.password = password; // Model pre-save hashes this
     if (skills) user.skills = skills;
     if (capacity) user.capacity = Number(capacity);
 
     await user.save();
+    console.log(`[User Update Debug] User ${req.params.id} updated successfully`);
 
     const response = user.toObject();
     delete response.password;
     res.json(response);
   } catch (error) {
+    console.error(`[User Update Debug] Update failed:`, error);
     res.status(400).json({ error: error.message });
   }
 });
