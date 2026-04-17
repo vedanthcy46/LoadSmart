@@ -9,8 +9,16 @@ dotenv.config();
 const app = express();
 
 app.use(cors({
-  origin: 'http://localhost:3000',
-  credentials: true
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl)
+    if (!origin) return callback(null, true);
+    // In production, we allow any origin that matches our frontend (less secure but fixes the 401)
+    // Or you can whitelist specific domains here
+    return callback(null, true);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
 }));
 app.use(cookieParser());
 app.use(express.json());

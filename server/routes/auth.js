@@ -44,16 +44,18 @@ router.post('/login', async (req, res) => {
 
         // Generate JWT token
         const token = generateToken(userPayload);
+        console.log(`[Auth Debug] Token generated for user: ${user.userId}`);
 
         // Set HTTP-only cookie
         res.cookie('token', token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
+            secure: true, // Must be true for sameSite: 'none'
+            sameSite: 'none', // Required for cross-site (Netlify to Render)
             maxAge: 24 * 60 * 60 * 1000 // 24 hours
         });
 
         res.json({
+            token, // Return token for cross-domain support
             user: {
                 id: user.userId,
                 username: user.name,
@@ -68,13 +70,22 @@ router.post('/login', async (req, res) => {
 
 // Logout route
 router.post('/logout', (req, res) => {
-    res.clearCookie('token');
+    res.clearCookie('token', {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'none'
+    });
     res.json({ message: 'Logged out successfully' });
 });
 
 // Get current user (verify token)
 router.get('/me', (req, res) => {
-    const token = req.cookies.token;
+    let token = req.cookies?.token;
+    
+    const authHeader = req.headers['authorization'];
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.split(' ')[1];
+    }
 
     if (!token) {
         return res.status(401).json({ error: 'Not authenticated' });

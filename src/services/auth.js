@@ -16,6 +16,9 @@ api.interceptors.request.use(
         const token = localStorage.getItem('token');
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
+            console.log(`[Auth Debug] Attaching token to ${config.method?.toUpperCase()} ${config.url}`);
+        } else {
+            console.log(`[Auth Debug] No token found in localStorage for ${config.url}`);
         }
         return config;
     },
