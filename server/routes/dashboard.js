@@ -14,6 +14,7 @@ router.get('/stats', async (req, res) => {
     const totalEmployees = employees.length;
     const totalTasks = tasks.length;
     const completedTasks = tasks.filter(t => t.status === 'Completed').length;
+    const inProgressTasks = tasks.filter(t => t.status === 'In Progress').length;
     const pendingTasks = tasks.filter(t => t.status === 'Pending').length;
 
     const avgProductivity = totalEmployees > 0
@@ -33,7 +34,7 @@ router.get('/stats', async (req, res) => {
       totalTasks,
       completedTasks,
       pendingTasks,
-      inProgressTasks: 0,
+      inProgressTasks,
       avgProductivity,
       overloadedCount,
       aiInsights
