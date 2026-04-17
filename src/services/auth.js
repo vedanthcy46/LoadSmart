@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = 'https://loadsmart.onrender.com/api';
 
 const api = axios.create({
     baseURL: API_BASE_URL,
@@ -10,19 +10,41 @@ const api = axios.create({
     }
 });
 
+// Add request interceptor to attach token from localStorage
+api.interceptors.request.use(
+    (config) => {
+        const token = localStorage.getItem('token');
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+    },
+    (error) => Promise.reject(error)
+);
+
 // Add response interceptor to handle token expiration
 api.interceptors.response.use(
-    (response) => response,
+    (response) => {
+        // If the response contains a token, save it
+        if (response.data?.token) {
+            localStorage.setItem('token', response.data.token);
+        }
+        return response;
+    },
     (error) => {
-        // Remove automatic redirect to prevent infinite loops
-        // Handle redirects in components instead
+        if (error.response?.status === 401) {
+            localStorage.removeItem('token');
+        }
         return Promise.reject(error);
     }
 );
 
 export const authAPI = {
     login: (data) => api.post('/auth/login', data),
-    logout: () => api.post('/auth/logout'),
+    logout: () => {
+        localStorage.removeItem('token');
+        return api.post('/auth/logout');
+    },
     getCurrentUser: () => api.get('/auth/me')
 };
 

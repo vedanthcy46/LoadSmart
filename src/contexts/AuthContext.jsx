@@ -10,7 +10,12 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        checkAuthStatus();
+        const token = localStorage.getItem('token');
+        if (token) {
+            checkAuthStatus();
+        } else {
+            setLoading(false);
+        }
     }, []);
 
     const checkAuthStatus = async () => {
@@ -19,6 +24,7 @@ export const AuthProvider = ({ children }) => {
             setUser(data.user);
         } catch (error) {
             setUser(null);
+            localStorage.removeItem('token'); // Clear invalid token
         } finally {
             setLoading(false);
         }
