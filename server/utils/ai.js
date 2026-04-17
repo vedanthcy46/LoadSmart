@@ -1,7 +1,7 @@
 import Groq from 'groq-sdk';
 
 const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY
+  apiKey: process.env.GROQ_API_KEY,
 });
 
 const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
@@ -36,22 +36,19 @@ Provide a concise 2-3 line explanation focusing on performance, workload, and sk
 };
 
 export const generateManagerSuggestion = async (task, employees) => {
-  const employeeList = employees.map(e =>
-    `- ${e.name}: Performance ${e.performanceScore}%, Workload ${e.workload}%, Skills: ${e.skills.join(', ')}`
+  const result = await generateAITaskAssignment(
+    task.title,
+    task.description,
+    task.requiredSkills,
+    task.estimatedHours,
+    employees
+  );
+
+  const suggestion = result.assignments.map(a => 
+    `${a.employeeId} (${a.assignedSkill}): ${a.hours} hrs - ${a.reason}`
   ).join('\n');
 
-  const prompt = `You are an AI workforce advisor. Suggest the best employee for this task:
-
-Task: "${task.title}"
-Required Skills: ${task.requiredSkills ? task.requiredSkills.join(', ') : ''}
-Priority: ${task.priority}
-
-Available Employees:
-${employeeList}
-
-Respond with the employee name and a brief reason (2 lines max).`;
-
-  return await generateAIResponse(prompt);
+  return `Suggested Distribution:\n${suggestion}`;
 };
 
 export const analyzeStressLevel = async (stressNote, stressLevel) => {
@@ -81,80 +78,84 @@ Provide 2-3 key insights about team productivity and workload distribution.`;
   return await generateAIResponse(prompt);
 };
 
-export const generateAITaskAssignment = async (taskTitle, requiredSkills, employees) => {
-  // Prepare employee list in the exact format requested
+export const generateAITaskAssignment = async (taskTitle, description, requiredSkills, estimatedHours, employees) => {
+  // Prepare employee list with stressLevel and other metrics
   const employeeListJson = employees.map(emp => ({
     userId: emp.userId,
     name: emp.name,
     skills: emp.skills,
     performanceScore: emp.performanceScore,
     currentLoad: emp.currentLoad,
-    capacity: emp.capacity
+    capacity: emp.capacity,
+    stressLevel: emp.stressLevel || 1
   }));
 
-  const prompt = `You are an intelligent task allocation assistant.
+  const prompt = `You are an intelligent workforce manager.
 
-Task: ${taskTitle}
-Required Skills: ${requiredSkills ? requiredSkills.join(', ') : ''}
+Task:
+* Title: ${taskTitle}
+* Description: ${description}
+* Required Skills: ${requiredSkills ? requiredSkills.join(', ') : ''}
+* Total Estimated Hours: ${estimatedHours}
 
 Employees:
 ${JSON.stringify(employeeListJson, null, 2)}
 
-Choose the best employee based on:
-* matching skills
-* high performance
-* low workload
+Analyze and:
+1. Split the task based on required skills if it makes sense (e.g., frontend work vs styling vs backend).
+2. Distribute work fairly among employees based on:
+   * skill match
+   * workload (currentLoad vs capacity)
+   * stress level (Avoid 4-5, prefer 1-3)
+3. Ensure the total hours assigned across all employees equals ${estimatedHours}.
 
-Return ONLY:
+Return ONLY structured JSON in this format:
 {
-"userId": "EMP001",
-"reason": "short explanation"
+  "assignments": [
+    {
+      "employeeId": "EMP001",
+      "assignedSkill": "react",
+      "hours": 3,
+      "reason": "short explanation"
+    }
+  ]
 }`;
 
   try {
     const response = await groq.chat.completions.create({
       model: GROQ_MODEL,
       messages: [{ role: 'user', content: prompt }],
-      temperature: 0.3,
-      max_tokens: 200
+      temperature: 0.1,
+      max_tokens: 800
     });
 
     const aiResponse = response.choices[0].message.content.trim();
 
     // Try to parse JSON from the AI response
     try {
-      // Extract JSON from response if it contains extra text
       const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
+        const parsed = JSON.parse(jsonMatch[0]);
+        if (parsed.assignments && Array.isArray(parsed.assignments)) {
+          return parsed;
+        }
       }
-      return JSON.parse(aiResponse);
+      throw new Error('Invalid AI response structure');
     } catch (parseError) {
       console.error('Failed to parse AI response as JSON:', parseError);
-      // Fallback: extract userId and reason using regex
-      const userIdMatch = aiResponse.match(/EMP\d{3}|ADM\d{3}/);
-      if (userIdMatch) {
-        return {
-          userId: userIdMatch[0],
-          reason: aiResponse.substring(0, 100)
-        };
-      }
-      throw new Error('Could not parse AI response');
+      // Fallback: assign entire task to one person
+      const sorted = [...employees].sort((a, b) => (a.currentLoad / a.capacity) - (b.currentLoad / b.capacity));
+      return {
+        assignments: [{
+          employeeId: sorted[0].userId,
+          assignedSkill: requiredSkills[0] || 'general',
+          hours: estimatedHours,
+          reason: "Fallback assignment due to AI parsing error."
+        }]
+      };
     }
   } catch (error) {
     console.error('Groq API Error in task assignment:', error.message);
-    // Fallback: use the first matching employee
-    const matchingEmployee = employees.find(emp =>
-      requiredSkills && requiredSkills.some(reqSkill => 
-        emp.skills.some(skill => skill.toLowerCase().includes(reqSkill.toLowerCase()))
-      )
-    );
-    if (matchingEmployee) {
-      return {
-        userId: matchingEmployee.userId,
-        reason: `Selected based on skill match and performance score of ${matchingEmployee.performanceScore}%`
-      };
-    }
     throw error;
   }
 };

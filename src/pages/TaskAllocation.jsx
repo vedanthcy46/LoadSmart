@@ -103,9 +103,9 @@ export default function TaskAllocation() {
         deadline: formData.deadline || undefined
       });
 
-      setSuggestion(data.aiExplanation);
+      setSuggestion(`Task split into ${data.tasks.length} sub-tasks by AI.`);
       setLastAssignment(data);
-      setTasks(prev => [data.task, ...prev]);
+      setTasks(prev => [...data.tasks, ...prev]);
       setFormData({
         title: '',
         description: '',
@@ -298,19 +298,25 @@ export default function TaskAllocation() {
               </div>
             )}
 
-            {lastAssignment && (
+            {lastAssignment && lastAssignment.assignments && (
               <div className="mt-4 p-4 bg-emerald-50 rounded-lg border border-emerald-200">
                 <div className="flex items-center gap-2 mb-3">
                   <User className="w-4 h-4 text-emerald-600" />
-                  <span className="text-sm font-medium text-emerald-700">Task Assigned Successfully!</span>
+                  <span className="text-sm font-medium text-emerald-700">Task Split & Assigned Successfully!</span>
                 </div>
-                <div className="space-y-2">
-                  <p className="text-sm text-slate-700">
-                    <span className="font-medium">Employee:</span> {lastAssignment.employee.name} ({lastAssignment.employee.userId})
-                  </p>
-                  <p className="text-sm text-slate-700">
-                    <span className="font-medium">Skills:</span> {lastAssignment.employee.skills.join(', ')}
-                  </p>
+                <div className="space-y-3">
+                  {lastAssignment.assignments.map((asgn, idx) => (
+                    <div key={idx} className="p-2 bg-white rounded border border-emerald-100 shadow-sm">
+                      <div className="flex justify-between items-start mb-1">
+                        <span className="text-sm font-bold text-slate-800">{asgn.employeeId}</span>
+                        <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-medium">
+                          {asgn.hours} hrs
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 mb-1">Skill: <span className="text-slate-700 font-medium">{asgn.assignedSkill}</span></p>
+                      <p className="text-xs text-slate-600 italic">"{asgn.reason}"</p>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}

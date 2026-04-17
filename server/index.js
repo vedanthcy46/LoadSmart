@@ -59,6 +59,7 @@ import aiRouter from './routes/ai.js';
 import authRouter from './routes/auth.js';
 import profileRouter from './routes/profile.js';
 import skillsRouter from './routes/skills.js';
+import feedbackRouter from './routes/feedback.js';
 import Skill from './models/Skill.js';
 import User from './models/User.js';
 
@@ -104,6 +105,7 @@ app.use('/api/ai', aiRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/profile', profileRouter);
 app.use('/api/skills', skillsRouter);
+app.use('/api/feedback', feedbackRouter);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

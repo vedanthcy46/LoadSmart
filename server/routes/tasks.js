@@ -92,80 +92,88 @@ router.post('/auto-assign', async (req, res) => {
       return res.status(400).json({ error: 'No employees with matching skills found' });
     }
 
-    // Use AI to select the best employee
-    let aiAssignment;
+    // Use AI to split the task and assign to employees
+    let aiResult;
     try {
-      aiAssignment = await generateAITaskAssignment(title, requiredSkills, filteredEmployees);
+      aiResult = await generateAITaskAssignment(title, description, requiredSkills, estimatedHours, filteredEmployees);
     } catch (aiError) {
       console.error('AI assignment failed, using fallback:', aiError.message);
-      // Fallback
-      const employee = filteredEmployees[0];
-      aiAssignment = {
-        userId: employee.userId,
-        reason: `Selected based on skill match and performance score of ${employee.performanceScore}%`
+      // Fallback: assign everything to the first eligible person
+      aiResult = {
+        assignments: [{
+          employeeId: filteredEmployees[0].userId,
+          assignedSkill: requiredSkills[0],
+          hours: estimatedHours,
+          reason: "Selected as fallback due to AI service error."
+        }]
       };
     }
 
-    // Find the selected employee by userId
-    const selectedEmployee = filteredEmployees.find(emp => emp.userId === aiAssignment.userId);
-    if (!selectedEmployee) {
-      return res.status(400).json({ error: 'Selected employee not found' });
-    }
+    const createdTasks = [];
+    const updatedEmployees = [];
 
-    // Create and save the task
-    const task = new Task({
-      title,
-      description,
-      priority,
-      requiredSkills,
-      estimatedHours,
-      deadline,
-      assignedTo: selectedEmployee.userId, // Store string ID as requested
-      status: 'Pending', // Exact match
-      aiExplanation: aiAssignment.reason
-    });
+    // Process each assignment from AI
+    for (const assignment of aiResult.assignments) {
+      const selectedEmployee = filteredEmployees.find(emp => emp.userId === assignment.employeeId);
+      if (!selectedEmployee) continue;
 
-    await task.save();
+      // Create a split task entry
+      const taskTitle = aiResult.assignments.length > 1 
+        ? `${title} [${assignment.assignedSkill}]` 
+        : title;
 
-    // Update employee workload
-    selectedEmployee.workload = Math.min(100, (selectedEmployee.workload || 0) + (estimatedHours * 5));
-    selectedEmployee.currentLoad = (selectedEmployee.currentLoad || 0) + 1;
-    selectedEmployee.totalTasks = (selectedEmployee.totalTasks || 0) + 1;
+      const task = new Task({
+        title: taskTitle,
+        description,
+        priority,
+        requiredSkills: [assignment.assignedSkill],
+        estimatedHours: assignment.hours,
+        deadline,
+        assignedTo: selectedEmployee.userId,
+        status: 'Pending',
+        aiExplanation: assignment.reason
+      });
 
-    if (selectedEmployee.workload > 80) {
-      selectedEmployee.status = 'overloaded';
-    } else if (selectedEmployee.workload > 40) {
-      selectedEmployee.status = 'busy';
-    } else {
-      selectedEmployee.status = 'available';
-    }
+      await task.save();
+      createdTasks.push(task);
 
-    await selectedEmployee.save();
+      // Update employee workload based on hours
+      // Logic: 1 hour of work adds 2.5% workload (40 hours = 100% workload)
+      const workloadImpact = assignment.hours * 2.5;
+      selectedEmployee.workload = Math.min(100, (selectedEmployee.workload || 0) + workloadImpact);
+      selectedEmployee.currentLoad = (selectedEmployee.currentLoad || 0) + 1;
+      selectedEmployee.totalTasks = (selectedEmployee.totalTasks || 0) + 1;
 
-    // Create notification for employee
-    await createNotification(
-      selectedEmployee.userId, // Changed to string reference
-      `New task "${title}" has been assigned to you`,
-      'task_assigned',
-      task._id
-    );
+      if (selectedEmployee.workload > 80) {
+        selectedEmployee.status = 'overloaded';
+      } else if (selectedEmployee.workload > 40) {
+        selectedEmployee.status = 'busy';
+      } else {
+        selectedEmployee.status = 'available';
+      }
 
-    res.json({
-      task: {
-        ...task.toObject(),
-        assignedTo: {
-          name: selectedEmployee.name,
-          skills: selectedEmployee.skills,
-          userId: selectedEmployee.userId
-        }
-      },
-      employee: {
+      await selectedEmployee.save();
+      updatedEmployees.push({
         id: selectedEmployee._id,
         userId: selectedEmployee.userId,
         name: selectedEmployee.name,
-        skills: selectedEmployee.skills
-      },
-      aiExplanation: aiAssignment.reason
+        assignedHours: assignment.hours,
+        assignedSkill: assignment.assignedSkill
+      });
+
+      // Create notification for employee
+      await createNotification(
+        selectedEmployee.userId,
+        `New task "${taskTitle}" (${assignment.hours} hrs) has been assigned to you`,
+        'task_assigned',
+        task._id
+      );
+    }
+
+    res.json({
+      tasks: createdTasks,
+      employees: updatedEmployees,
+      assignments: aiResult.assignments
     });
   } catch (error) {
     console.error('Auto-assign error:', error);

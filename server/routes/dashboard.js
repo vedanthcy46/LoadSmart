@@ -110,4 +110,29 @@ router.get('/task-priority-distribution', async (req, res) => {
   }
 });
 
+router.get('/leaderboard', async (req, res) => {
+  try {
+    const employees = await User.find({ role: 'employee' });
+    
+    const leaderboard = employees.map(emp => {
+      // Productivity score calculation: (completed tasks / total tasks) * performanceScore
+      const completionRate = emp.totalTasks > 0 ? (emp.completedTasks / emp.totalTasks) : 0;
+      const score = Math.round((completionRate * 0.7 + (emp.performanceScore / 100) * 0.3) * 100);
+      
+      return {
+        name: emp.name,
+        userId: emp.userId,
+        score: score,
+        completedTasks: emp.completedTasks,
+        performanceScore: emp.performanceScore
+      };
+    })
+    .sort((a, b) => b.score - a.score); // Return everyone sorted by score
+
+    res.json(leaderboard);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;

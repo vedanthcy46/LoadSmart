@@ -3,9 +3,9 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend
 } from 'recharts';
-import { Users, ClipboardCheck, Clock, TrendingUp, AlertTriangle, Sparkles } from 'lucide-react';
+import { Users, ClipboardCheck, Clock, TrendingUp, AlertTriangle, Sparkles, Trophy, MessageSquare } from 'lucide-react';
 import StatCard from '../components/StatCard';
-import { dashboardAPI } from '../services/api';
+import { dashboardAPI, feedbackAPI, userAPI } from '../services/api';
 
 const COLORS = ['#06b6d4', '#f59e0b', '#ef4444', '#10b981'];
 
@@ -14,21 +14,27 @@ export default function Dashboard() {
   const [teamData, setTeamData] = useState([]);
   const [workloadDist, setWorkloadDist] = useState(null);
   const [priorityDist, setPriorityDist] = useState(null);
+  const [leaderboard, setLeaderboard] = useState([]);
+  const [feedbacks, setFeedbacks] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [statsRes, teamRes, workloadRes, priorityRes] = await Promise.all([
+        const [statsRes, teamRes, workloadRes, priorityRes, leaderboardRes, feedbacksRes] = await Promise.all([
           dashboardAPI.getStats(),
           dashboardAPI.getTeamOverview(),
           dashboardAPI.getWorkloadDistribution(),
-          dashboardAPI.getTaskPriorityDistribution()
+          dashboardAPI.getTaskPriorityDistribution(),
+          dashboardAPI.getLeaderboard(),
+          feedbackAPI.getAll()
         ]);
         setStats(statsRes.data);
         setTeamData(teamRes.data);
         setWorkloadDist(workloadRes.data);
         setPriorityDist(priorityRes.data);
+        setLeaderboard(leaderboardRes.data);
+        setFeedbacks(feedbacksRes.data);
       } catch (error) {
         console.error('Failed to fetch dashboard data:', error);
       } finally {
@@ -111,6 +117,82 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      {/* Leaderboard Section */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-2">
+            <Trophy className="w-6 h-6 text-amber-500" />
+            <h2 className="text-lg font-bold text-slate-800">Team Leaderboard & Rewards</h2>
+          </div>
+          <div className="flex gap-4 text-xs font-semibold uppercase tracking-wider">
+            <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-emerald-500 rounded-full"></div> Promotion Zone (&gt;85)</div>
+            <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-cyan-500 rounded-full"></div> High Performer</div>
+          </div>
+        </div>
+        
+        <div className="space-y-3">
+          {leaderboard.map((player, index) => {
+            const isPromotionZone = player.score >= 85;
+            const isHighPerformer = player.score >= 70 && player.score < 85;
+            
+            return (
+              <div key={player.userId} className={`flex items-center justify-between p-4 rounded-xl border transition-all ${
+                isPromotionZone ? 'bg-emerald-50/50 border-emerald-200 shadow-sm' : 
+                isHighPerformer ? 'bg-cyan-50/30 border-cyan-100' : 'bg-slate-50/30 border-slate-100'
+              }`}>
+                <div className="flex items-center gap-4">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg shadow-sm ${
+                    index === 0 ? 'bg-amber-100 text-amber-600' : 
+                    index === 1 ? 'bg-slate-200 text-slate-600' : 
+                    index === 2 ? 'bg-orange-100 text-orange-600' : 'bg-white text-slate-400'
+                  }`}>
+                    {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : index + 1}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-slate-800">{player.name}</span>
+                      {isPromotionZone && (
+                        <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded text-[10px] font-bold uppercase tracking-tighter">
+                          Promotion Candidate
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-500">{player.completedTasks} Tasks Completed</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-6">
+                  <div className="text-right">
+                    <div className={`text-2xl font-black ${
+                      isPromotionZone ? 'text-emerald-600' : 'text-slate-700'
+                    }`}>{player.score}</div>
+                    <div className="text-[10px] text-slate-400 font-bold uppercase">Productivity</div>
+                  </div>
+                  
+                  <button 
+                    onClick={async () => {
+                      try {
+                        await userAPI.awardBadge(player.userId, 'Top Performer 🏆');
+                        alert(`Reward given to ${player.name}!`);
+                      } catch (err) {
+                        alert('Failed to award badge');
+                      }
+                    }}
+                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+                      isPromotionZone 
+                        ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-md shadow-emerald-100' 
+                        : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                    }`}
+                  >
+                    {isPromotionZone ? 'Give Reward 🎁' : 'Commend'}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
@@ -245,6 +327,40 @@ export default function Dashboard() {
               ))}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* Feedback Panel */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <div className="flex items-center gap-2 mb-6">
+          <MessageSquare className="w-6 h-6 text-cyan-600" />
+          <h2 className="text-lg font-bold text-slate-800">Employee Feedback</h2>
+        </div>
+        <div className="space-y-4">
+          {feedbacks.length === 0 ? (
+            <p className="text-center py-8 text-slate-500 bg-slate-50 rounded-lg">No feedback received yet.</p>
+          ) : (
+            feedbacks.map((fb) => (
+              <div key={fb._id} className="p-4 rounded-lg border border-slate-100 hover:border-cyan-200 transition-colors bg-slate-50/50">
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-slate-700">{fb.employeeId}</span>
+                    <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                      fb.stressLevel >= 4 ? 'bg-rose-100 text-rose-700' :
+                      fb.stressLevel >= 3 ? 'bg-amber-100 text-amber-700' :
+                      'bg-emerald-100 text-emerald-700'
+                    }`}>
+                      Stress: {fb.stressLevel}/5
+                    </span>
+                  </div>
+                  <span className="text-xs text-slate-400">
+                    {new Date(fb.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
+                <p className="text-slate-600 text-sm italic">"{fb.message}"</p>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>

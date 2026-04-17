@@ -183,4 +183,29 @@ router.delete('/:id', authenticateToken, async (req, res) => {
   }
 });
 
+// Award badge to user (Admin only)
+router.post('/:id/badge', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const { badge } = req.body;
+    const user = await User.findOne({ userId: req.params.id });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (!user.badges.includes(badge)) {
+      user.badges.push(badge);
+      await user.save();
+    }
+
+    res.json({ message: 'Badge awarded successfully', badges: user.badges });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;

@@ -7,6 +7,7 @@ export const userAPI = {
   update: (id, data) => api.put(`/users/${id}`, data),
   updateStress: (id, data) => api.put(`/users/${id}/stress`, data),
   getStats: (id) => api.get(`/users/${id}/stats`),
+  awardBadge: (id, badge) => api.post(`/users/${id}/badge`, { badge }),
   delete: (id) => api.delete(`/users/${id}`)
 };
 
@@ -27,7 +28,13 @@ export const dashboardAPI = {
   getStats: () => api.get('/dashboard/stats'),
   getTeamOverview: () => api.get('/dashboard/team-overview'),
   getWorkloadDistribution: () => api.get('/dashboard/workload-distribution'),
-  getTaskPriorityDistribution: () => api.get('/dashboard/task-priority-distribution')
+  getTaskPriorityDistribution: () => api.get('/dashboard/task-priority-distribution'),
+  getLeaderboard: () => api.get('/dashboard/leaderboard')
+};
+
+export const feedbackAPI = {
+  submit: (data) => api.post('/feedback', data),
+  getAll: () => api.get('/feedback'),
 };
 
 export const notificationAPI = {

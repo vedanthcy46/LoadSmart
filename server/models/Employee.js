@@ -15,6 +15,8 @@ const employeeSchema = new mongoose.Schema({
   totalTasks: { type: Number, default: 0 },
   stressLevel: { type: Number, default: 1, min: 1, max: 5 },
   stressNote: { type: String, default: '' },
+  stressCategory: { type: String, default: '' },
+  stressAIAnalysis: { type: String, default: '' },
   status: {
     type: String,
     enum: ['available', 'busy', 'overloaded'],

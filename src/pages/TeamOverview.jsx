@@ -172,8 +172,8 @@ export default function TeamOverview() {
       </div>
 
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-semibold text-slate-800">
                 {editMode ? 'Edit Employee' : 'Add New Employee'}
@@ -184,7 +184,7 @@ export default function TeamOverview() {
             </div>
 
             <form onSubmit={handleAddEmployee} className="space-y-4">
-              {!editMode && (
+              {/* {!editMode && (
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Employee ID (Optional)</label>
                   <input
@@ -195,7 +195,7 @@ export default function TeamOverview() {
                     placeholder="e.g., EMP001"
                   />
                 </div>
-              )}
+              )} */}
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
@@ -209,7 +209,7 @@ export default function TeamOverview() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Email (Optional)</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1" required>Email</label>
                 <input
                   type="email"
                   value={newEmployee.email}
