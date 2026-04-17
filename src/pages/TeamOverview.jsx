@@ -61,6 +61,7 @@ export default function TeamOverview() {
 
   const handleAddEmployee = async (e) => {
     e.preventDefault();
+    console.log('[Auth Debug] Saving Employee. Mode:', editMode ? 'Edit' : 'Create', 'Selected:', selectedEmployee?.userId);
     try {
       if (editMode && selectedEmployee) {
         await userAPI.update(selectedEmployee.userId, newEmployee);
@@ -148,6 +149,7 @@ export default function TeamOverview() {
         <button
           onClick={() => {
             setEditMode(false);
+            setSelectedEmployee(null);
             setNewEmployee({ userId: '', name: '', email: '', password: '', skills: [], capacity: 50 });
             setShowAddModal(true);
           }}
