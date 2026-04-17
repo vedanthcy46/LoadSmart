@@ -148,7 +148,7 @@ export default function TeamOverview() {
     setAnalyzing(true);
     try {
       await userAPI.updateStress(selectedEmployee.userId, stressForm);
-      const { data } = await aiAPI.analyzeStress(stressForm);
+      const { data } = await aiAPI.analyzeStress({ ...stressForm, userId: selectedEmployee.userId });
       setStressAnalysis(data.analysis);
       fetchEmployees();
     } catch (error) {
