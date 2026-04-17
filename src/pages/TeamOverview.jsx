@@ -61,12 +61,40 @@ export default function TeamOverview() {
 
   const handleAddEmployee = async (e) => {
     e.preventDefault();
+    
+    // 1. Data Structuring
+    const formData = {
+      ...newEmployee,
+      capacity: Number(newEmployee.capacity),
+      // Ensure skills is an array (it should be, but let's be safe)
+      skills: Array.isArray(newEmployee.skills) ? newEmployee.skills : []
+    };
+
+    console.log('[Auth Debug] Sending Data:', formData);
+
+    // 2. Strict Validation
+    if (!formData.name || !formData.email) {
+      alert('Name and Email are required');
+      return;
+    }
+
+    if (!editMode && !formData.password) {
+      alert('Password is required for new employees');
+      return;
+    }
+
+    if (formData.skills.length === 0) {
+      alert('Please select at least one skill');
+      return;
+    }
+
     console.log('[Auth Debug] Saving Employee. Mode:', editMode ? 'Edit' : 'Create', 'Selected:', selectedEmployee?.userId);
+    
     try {
       if (editMode && selectedEmployee) {
-        await userAPI.update(selectedEmployee.userId, newEmployee);
+        await userAPI.update(selectedEmployee.userId, formData);
       } else {
-        await userAPI.create(newEmployee);
+        await userAPI.create(formData);
       }
       setShowAddModal(false);
       setEditMode(false);

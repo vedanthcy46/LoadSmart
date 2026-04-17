@@ -44,8 +44,15 @@ router.post('/', authenticateToken, async (req, res) => {
 
     const { name, email, password, role, skills, capacity, userId } = req.body;
 
-    if (!name || !password || !capacity) {
-      return res.status(400).json({ error: 'Missing required fields' });
+    // Validation
+    if (!name || !email || (!password && req.body.password !== undefined)) {
+        return res.status(400).json({ error: 'Missing required fields: name, email, and password are required' });
+    }
+
+    // Check if email already exists
+    const existingEmail = await User.findOne({ email });
+    if (existingEmail) {
+      return res.status(400).json({ error: 'Email already exists' });
     }
 
     // Auto-generate userId if not provided
