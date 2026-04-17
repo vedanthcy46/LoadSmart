@@ -146,7 +146,11 @@ export default function TeamOverview() {
           <p className="text-slate-500">Monitor team workload and performance</p>
         </div>
         <button
-          onClick={() => setShowAddModal(true)}
+          onClick={() => {
+            setEditMode(false);
+            setNewEmployee({ userId: '', name: '', email: '', password: '', skills: [], capacity: 50 });
+            setShowAddModal(true);
+          }}
           className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-lg hover:from-cyan-600 hover:to-blue-700 transition-all"
         >
           <Plus className="w-4 h-4" />
@@ -184,7 +188,7 @@ export default function TeamOverview() {
             </div>
 
             <form onSubmit={handleAddEmployee} className="space-y-4">
-              {/* {!editMode && (
+              {!editMode && (
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Employee ID (Optional)</label>
                   <input
@@ -192,10 +196,10 @@ export default function TeamOverview() {
                     value={newEmployee.userId}
                     onChange={(e) => setNewEmployee(prev => ({ ...prev, userId: e.target.value }))}
                     className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-                    placeholder="e.g., EMP001"
+                    placeholder="Auto-generated if left blank"
                   />
                 </div>
-              )} */}
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
@@ -209,18 +213,19 @@ export default function TeamOverview() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1" required>Email</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
                 <input
                   type="email"
                   value={newEmployee.email}
                   onChange={(e) => setNewEmployee(prev => ({ ...prev, email: e.target.value }))}
                   className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                  required
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
-                  {editMode ? 'New Password (leave blank to keep current)' : 'Password'}
+                  {editMode ? 'New Password (Optional)' : 'Password'}
                 </label>
                 <input
                   type="password"
@@ -228,6 +233,7 @@ export default function TeamOverview() {
                   onChange={(e) => setNewEmployee(prev => ({ ...prev, password: e.target.value }))}
                   className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
                   required={!editMode}
+                  placeholder={editMode ? "Leave blank to keep current" : ""}
                 />
               </div>
 
