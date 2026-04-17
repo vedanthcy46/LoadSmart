@@ -21,7 +21,7 @@ export default function EmployeeCard({ employee, onClick }) {
           <div>
             <h3 className="font-semibold text-slate-800">{employee.name}</h3>
             <p className="text-sm text-slate-500">{employee.email}</p>
-            <p className="text-xs text-slate-400">{employee.employeeId}</p>
+            <p className="text-xs text-slate-400">{employee.userId}</p>
           </div>
         </div>
         <div className={`w-3 h-3 rounded-full ${statusColors[employee.status]}`} />

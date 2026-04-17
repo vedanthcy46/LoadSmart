@@ -1,14 +1,16 @@
 import api from './auth.js';
 
-export const employeeAPI = {
-  getAll: () => api.get('/employees'),
-  getById: (id) => api.get(`/employees/${id}`),
-  create: (data) => api.post('/employees', data),
-  update: (id, data) => api.put(`/employees/${id}`, data),
-  updateStress: (id, data) => api.put(`/employees/${id}/stress`, data),
-  getStats: (id) => api.get(`/employees/${id}/stats`),
-  delete: (id) => api.delete(`/employees/${id}`)
+export const userAPI = {
+  getAll: () => api.get('/users'),
+  getById: (id) => api.get(`/users/${id}`),
+  create: (data) => api.post('/users', data),
+  update: (id, data) => api.put(`/users/${id}`, data),
+  updateStress: (id, data) => api.put(`/users/${id}/stress`, data),
+  getStats: (id) => api.get(`/users/${id}/stats`),
+  delete: (id) => api.delete(`/users/${id}`)
 };
+
+export const employeeAPI = userAPI; // Alias for backward compatibility
 
 export const taskAPI = {
   getAll: (params) => api.get('/tasks', { params }),

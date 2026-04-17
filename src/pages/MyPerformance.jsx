@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { TrendingUp, Clock, CheckCircle2, Star, Target, Calendar } from 'lucide-react';
-import { employeeAPI } from '../services/api';
+import { userAPI } from '../services/api';
 import { authAPI } from '../services/auth.js';
 
 export default function MyPerformance() {
@@ -16,7 +16,7 @@ export default function MyPerformance() {
         try {
             const { data } = await authAPI.getCurrentUser();
             setUser(data.user);
-            const { data: statsData } = await employeeAPI.getStats(data.user.id);
+            const { data: statsData } = await userAPI.getStats(data.user.id);
             setStats(statsData);
         } catch (error) {
             console.error('Failed to fetch performance stats:', error);

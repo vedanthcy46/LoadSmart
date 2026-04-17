@@ -31,8 +31,8 @@ export default function Login() {
         setError('');
 
         try {
-            // The backend handles both employeeId and adminId using a fallback
-            const user = await login({ employeeId: formData.loginId, password: formData.password });
+            // The backend handles userId, employeeId, and adminId for compatibility
+            const user = await login({ userId: formData.loginId, password: formData.password });
 
             // Navigate based on role
             if (user.role === 'admin') {

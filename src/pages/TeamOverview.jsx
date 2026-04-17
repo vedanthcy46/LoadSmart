@@ -2,12 +2,12 @@ import { useState, useEffect } from 'react';
 import { Plus, X, Heart, Brain, Loader2 } from 'lucide-react';
 import EmployeeCard from '../components/EmployeeCard';
 import WorkloadIndicator from '../components/WorkloadIndicator';
-import { employeeAPI, aiAPI } from '../services/api';
-
-const skills = ['JavaScript', 'Python', 'React', 'Node.js', 'Design', 'Testing', 'DevOps', 'Data Analysis'];
+import { userAPI, aiAPI, skillAPI } from '../services/api';
 
 export default function TeamOverview() {
   const [employees, setEmployees] = useState([]);
+  const [skills, setSkills] = useState([]);
+  const [newSkill, setNewSkill] = useState('');
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
@@ -15,6 +15,7 @@ export default function TeamOverview() {
   const [analyzing, setAnalyzing] = useState(false);
 
   const [newEmployee, setNewEmployee] = useState({
+    userId: '',
     name: '',
     email: '',
     password: '',
@@ -22,35 +23,68 @@ export default function TeamOverview() {
     capacity: 50
   });
 
+  const [editMode, setEditMode] = useState(false);
+
   const [stressForm, setStressForm] = useState({
     stressLevel: 1,
     stressNote: ''
   });
 
   useEffect(() => {
-    fetchEmployees();
+    fetchInitialData();
   }, []);
+
+  const fetchInitialData = async () => {
+    try {
+      setLoading(true);
+      const [employeesRes, skillsRes] = await Promise.all([
+        userAPI.getAll(),
+        skillAPI.getAll()
+      ]);
+      setEmployees(employeesRes.data);
+      setSkills(skillsRes.data);
+    } catch (error) {
+      console.error('Failed to fetch initial data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchEmployees = async () => {
     try {
-      const { data } = await employeeAPI.getAll();
+      const { data } = await userAPI.getAll();
       setEmployees(data);
     } catch (error) {
       console.error('Failed to fetch employees:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
   const handleAddEmployee = async (e) => {
     e.preventDefault();
     try {
-      await employeeAPI.create(newEmployee);
+      if (editMode && selectedEmployee) {
+        await userAPI.update(selectedEmployee.userId, newEmployee);
+      } else {
+        await userAPI.create(newEmployee);
+      }
       setShowAddModal(false);
-      setNewEmployee({ name: '', email: '', password: '', skills: [], capacity: 50 });
+      setEditMode(false);
+      setNewEmployee({ userId: '', name: '', email: '', password: '', skills: [], capacity: 50 });
       fetchEmployees();
     } catch (error) {
-      console.error('Failed to add employee:', error);
+      console.error('Failed to save employee:', error);
+      alert(error.response?.data?.error || 'Failed to save employee');
+    }
+  };
+
+  const handleDeleteEmployee = async (userId) => {
+    if (!window.confirm('Are you sure you want to delete this employee?')) return;
+    try {
+      await userAPI.delete(userId);
+      setSelectedEmployee(null);
+      fetchEmployees();
+    } catch (error) {
+      console.error('Failed to delete employee:', error);
     }
   };
 
@@ -63,13 +97,28 @@ export default function TeamOverview() {
     }));
   };
 
+  const handleAddSkill = async () => {
+    if (!newSkill.trim()) return;
+    try {
+      await skillAPI.create(newSkill.trim());
+      const skillsRes = await skillAPI.getAll();
+      setSkills(skillsRes.data);
+      // Automatically select the new skill for the employee
+      toggleSkill(newSkill.trim());
+      setNewSkill('');
+    } catch (error) {
+      console.error('Failed to create skill:', error);
+      alert(error.response?.data?.error || 'Failed to create skill');
+    }
+  };
+
   const handleStressSubmit = async (e) => {
     e.preventDefault();
     if (!selectedEmployee) return;
 
     setAnalyzing(true);
     try {
-      await employeeAPI.updateStress(selectedEmployee._id, stressForm);
+      await userAPI.updateStress(selectedEmployee.userId, stressForm);
       const { data } = await aiAPI.analyzeStress(stressForm);
       setStressAnalysis(data.analysis);
       fetchEmployees();
@@ -126,13 +175,28 @@ export default function TeamOverview() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-slate-800">Add New Employee</h2>
-              <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-600">
+              <h2 className="text-xl font-semibold text-slate-800">
+                {editMode ? 'Edit Employee' : 'Add New Employee'}
+              </h2>
+              <button onClick={() => { setShowAddModal(false); setEditMode(false); }} className="text-slate-400 hover:text-slate-600">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleAddEmployee} className="space-y-4">
+              {!editMode && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Employee ID (Optional)</label>
+                  <input
+                    type="text"
+                    value={newEmployee.userId}
+                    onChange={(e) => setNewEmployee(prev => ({ ...prev, userId: e.target.value }))}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                    placeholder="e.g., EMP001"
+                  />
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
                 <input
@@ -145,36 +209,37 @@ export default function TeamOverview() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Email (Optional)</label>
                 <input
                   type="email"
                   value={newEmployee.email}
                   onChange={(e) => setNewEmployee(prev => ({ ...prev, email: e.target.value }))}
                   className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-                  required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  {editMode ? 'New Password (leave blank to keep current)' : 'Password'}
+                </label>
                 <input
                   type="password"
                   value={newEmployee.password}
                   onChange={(e) => setNewEmployee(prev => ({ ...prev, password: e.target.value }))}
                   className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-                  required
+                  required={!editMode}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Skills</label>
-                <div className="flex flex-wrap gap-2">
+                <label className="block text-sm font-medium text-slate-700 mb-2">Skills</label>
+                <div className="flex flex-wrap gap-2 mb-3">
                   {skills.map(skill => (
                     <button
                       key={skill}
                       type="button"
                       onClick={() => toggleSkill(skill)}
-                      className={`px-3 py-2 text-sm rounded-lg border transition-colors ${newEmployee.skills.includes(skill)
+                      className={`px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors ${newEmployee.skills.includes(skill)
                         ? 'bg-cyan-500 text-white border-cyan-500'
                         : 'bg-white text-slate-600 border-slate-300 hover:border-cyan-500'
                         }`}
@@ -182,6 +247,22 @@ export default function TeamOverview() {
                       {skill}
                     </button>
                   ))}
+                </div>
+                <div className="flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    value={newSkill}
+                    onChange={(e) => setNewSkill(e.target.value)}
+                    className="flex-1 px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                    placeholder="Add other skill..."
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddSkill}
+                    className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors text-sm font-medium"
+                  >
+                    Add
+                  </button>
                 </div>
                 {newEmployee.skills.length === 0 && (
                   <p className="text-sm text-red-500 mt-1">Please select at least one skill</p>
@@ -208,9 +289,9 @@ export default function TeamOverview() {
 
               <button
                 type="submit"
-                className="w-full px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-lg hover:from-cyan-600 hover:to-blue-700 transition-all"
+                className="w-full px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-lg font-medium hover:from-cyan-600 hover:to-blue-700 transition-all shadow-md"
               >
-                Add Employee
+                {editMode ? 'Save Changes' : 'Add Employee'}
               </button>
             </form>
           </div>
@@ -221,7 +302,34 @@ export default function TeamOverview() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-slate-800">{selectedEmployee.name}</h2>
+              <div className="flex items-center gap-3">
+                <h2 className="text-xl font-semibold text-slate-800">{selectedEmployee.name}</h2>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setEditMode(true);
+                      setNewEmployee({
+                        userId: selectedEmployee.userId,
+                        name: selectedEmployee.name,
+                        email: selectedEmployee.email || '',
+                        password: '',
+                        skills: selectedEmployee.skills || [],
+                        capacity: selectedEmployee.capacity || 50
+                      });
+                      setShowAddModal(true);
+                    }}
+                    className="text-xs px-2 py-1 bg-slate-100 text-slate-600 rounded hover:bg-slate-200 transition-colors"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDeleteEmployee(selectedEmployee.userId)}
+                    className="text-xs px-2 py-1 bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
               <button onClick={() => setSelectedEmployee(null)} className="text-slate-400 hover:text-slate-600">
                 <X className="w-5 h-5" />
               </button>
@@ -230,7 +338,7 @@ export default function TeamOverview() {
             <div className="space-y-4 mb-6">
               <div>
                 <p className="text-sm text-slate-500">Employee ID</p>
-                <p className="font-medium text-slate-800">{selectedEmployee.employeeId}</p>
+                <p className="font-medium text-slate-800">{selectedEmployee.userId}</p>
               </div>
 
               <div>

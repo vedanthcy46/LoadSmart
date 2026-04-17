@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Sparkles, Send, Loader2, User, Brain, X, Plus } from 'lucide-react';
 import TaskCard from '../components/TaskCard';
-import { taskAPI, employeeAPI, skillAPI } from '../services/api';
+import { taskAPI, userAPI, skillAPI } from '../services/api';
 
 const priorities = ['High', 'Medium', 'Low'];
 
@@ -33,7 +33,7 @@ export default function TaskAllocation() {
     try {
       const [tasksRes, employeesRes, skillsRes] = await Promise.all([
         taskAPI.getAll(),
-        employeeAPI.getAll(),
+        userAPI.getAll(),
         skillAPI.getAll()
       ]);
       setTasks(tasksRes.data);
@@ -306,7 +306,7 @@ export default function TaskAllocation() {
                 </div>
                 <div className="space-y-2">
                   <p className="text-sm text-slate-700">
-                    <span className="font-medium">Employee:</span> {lastAssignment.employee.name} ({lastAssignment.employee.employeeId})
+                    <span className="font-medium">Employee:</span> {lastAssignment.employee.name} ({lastAssignment.employee.userId})
                   </p>
                   <p className="text-sm text-slate-700">
                     <span className="font-medium">Skills:</span> {lastAssignment.employee.skills.join(', ')}
