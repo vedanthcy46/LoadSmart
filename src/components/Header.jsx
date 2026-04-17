@@ -1,9 +1,9 @@
-import { Bell, Search, User, LogOut } from 'lucide-react';
+import { Bell, Search, User, LogOut, Menu } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { notificationAPI } from '../services/api';
 import { authAPI } from '../services/auth.js';
 
-export default function Header() {
+export default function Header({ onMenuClick }) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [user, setUser] = useState(null);
 
@@ -45,9 +45,15 @@ export default function Header() {
   };
 
   return (
-    <header className="fixed top-0 left-64 right-0 h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 z-40">
-      <div className="flex items-center gap-4 flex-1">
-        <div className="relative flex-1 max-w-md">
+    <header className="fixed top-0 lg:left-64 left-0 right-0 h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-6 z-40">
+      <div className="flex items-center gap-3 md:gap-4 flex-1">
+        <button 
+          onClick={onMenuClick}
+          className="lg:hidden p-2 hover:bg-slate-100 rounded-lg transition-colors"
+        >
+          <Menu className="w-6 h-6 text-slate-600" />
+        </button>
+        <div className="relative flex-1 max-w-md hidden sm:block">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
           <input
             type="text"
@@ -57,22 +63,22 @@ export default function Header() {
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 md:gap-4">
         <button className="relative p-2 hover:bg-slate-100 rounded-lg transition-colors">
           <Bell className="w-5 h-5 text-slate-600" />
           {unreadCount > 0 && (
-            <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+            <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center">
               {unreadCount}
             </span>
           )}
         </button>
 
-        <div className="flex items-center gap-3 pl-4 border-l border-slate-200">
-          <div className="w-8 h-8 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-full flex items-center justify-center">
+        <div className="flex items-center gap-2 md:gap-3 pl-2 md:pl-4 border-l border-slate-200">
+          <div className="w-8 h-8 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-full flex items-center justify-center hidden xs:flex">
             <User className="w-4 h-4 text-white" />
           </div>
-          <div className="text-sm">
-            <p className="font-medium text-slate-800">{user?.name || 'Admin'}</p>
+          <div className="text-sm hidden sm:block">
+            <p className="font-medium text-slate-800 leading-tight">{user?.name || 'Admin'}</p>
             <p className="text-xs text-slate-500">Manager</p>
           </div>
           <button
