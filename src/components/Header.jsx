@@ -2,10 +2,12 @@ import { Bell, Search, User, LogOut, Menu } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { notificationAPI } from '../services/api';
 import { authAPI } from '../services/auth.js';
+import { useSearch } from '../contexts/SearchContext';
 
 export default function Header({ onMenuClick }) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [user, setUser] = useState(null);
+  const { searchQuery, setSearchQuery } = useSearch();
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -58,6 +60,8 @@ export default function Header({ onMenuClick }) {
           <input
             type="text"
             placeholder="Search tasks, employees..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-slate-100 border border-transparent rounded-lg focus:bg-white focus:border-cyan-500 focus:outline-none transition-all"
           />
         </div>

@@ -4,6 +4,7 @@ import AdminLayout from './layouts/AdminLayout';
 import EmployeeLayout from './layouts/EmployeeLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { SearchProvider } from './contexts/SearchContext';
 
 function AppContent() {
   const { user, loading } = useAuth();
@@ -62,7 +63,9 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <SearchProvider>
+        <AppContent />
+      </SearchProvider>
     </AuthProvider>
   );
 }

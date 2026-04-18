@@ -6,6 +6,7 @@ import {
 import { Users, ClipboardCheck, Clock, TrendingUp, AlertTriangle, Sparkles, Trophy, MessageSquare } from 'lucide-react';
 import StatCard from '../components/StatCard';
 import { dashboardAPI, feedbackAPI, userAPI } from '../services/api';
+import { useSearch } from '../contexts/SearchContext';
 
 const COLORS = ['#06b6d4', '#f59e0b', '#ef4444', '#10b981'];
 
@@ -70,6 +71,17 @@ export default function Dashboard() {
     { name: 'Pending', value: stats.pendingTasks }
   ] : [];
 
+  const { searchQuery } = useSearch();
+
+  const filteredTeamData = teamData.filter(emp => 
+    emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    emp.email.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredLeaderboard = leaderboard.filter(player => 
+    player.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <div className="space-y-6">
       <div className="sticky top-16 bg-slate-50/95 backdrop-blur-sm z-30 py-4 border-b border-slate-200/50 mb-10">
@@ -132,7 +144,7 @@ export default function Dashboard() {
         </div>
         
         <div className="space-y-3">
-          {leaderboard.map((player, index) => {
+          {filteredLeaderboard.map((player, index) => {
             const isPromotionZone = player.score >= 85;
             const isHighPerformer = player.score >= 70 && player.score < 85;
             
@@ -271,7 +283,7 @@ export default function Dashboard() {
               </tr>
             </thead>
             <tbody>
-              {teamData.map((employee) => (
+              {filteredTeamData.map((employee) => (
                 <tr key={employee._id} className="border-b border-slate-100 hover:bg-slate-50">
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-3">

@@ -4,6 +4,7 @@ import TaskCard from '../components/TaskCard';
 import { taskAPI, aiAPI, feedbackAPI, dashboardAPI } from '../services/api';
 import { MessageSquare, Trophy, Send, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useSearch } from '../contexts/SearchContext';
 
 export default function MyTasks() {
   const [tasks, setTasks] = useState([]);
@@ -100,9 +101,17 @@ export default function MyTasks() {
     return <div className="p-8 text-center text-slate-500">Loading tasks...</div>;
   }
 
-  const pendingTasks = tasks.filter(t => t.status === 'Pending');
-  const inProgressTasks = tasks.filter(t => t.status === 'In Progress');
-  const completedTasks = tasks.filter(t => t.status === 'Completed');
+  const { searchQuery } = useSearch();
+
+  const filteredTasks = tasks.filter(task => 
+    task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    task.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    task.priority.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const pendingTasks = filteredTasks.filter(t => t.status === 'Pending');
+  const inProgressTasks = filteredTasks.filter(t => t.status === 'In Progress');
+  const completedTasks = filteredTasks.filter(t => t.status === 'Completed');
 
   return (
     <div className="space-y-6">

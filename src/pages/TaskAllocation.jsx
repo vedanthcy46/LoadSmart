@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Sparkles, Send, Loader2, User, Brain, X, Plus } from 'lucide-react';
 import TaskCard from '../components/TaskCard';
 import { taskAPI, userAPI, skillAPI } from '../services/api';
+import { useSearch } from '../contexts/SearchContext';
 
 const priorities = ['High', 'Medium', 'Low'];
 
@@ -132,9 +133,18 @@ export default function TaskAllocation() {
     }
   };
 
-  const pendingTasks = tasks.filter(t => t.status === 'Pending');
-  const inProgressTasks = tasks.filter(t => t.status === 'In Progress');
-  const completedTasks = tasks.filter(t => t.status === 'Completed');
+  const { searchQuery } = useSearch();
+
+  const filteredTasks = tasks.filter(task => 
+    task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    task.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    task.priority.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (task.assignedTo && task.assignedTo.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
+  const pendingTasks = filteredTasks.filter(t => t.status === 'Pending');
+  const inProgressTasks = filteredTasks.filter(t => t.status === 'In Progress');
+  const completedTasks = filteredTasks.filter(t => t.status === 'Completed');
 
   return (
     <div className="space-y-6">

@@ -3,6 +3,7 @@ import { Plus, X, Heart, Brain, Loader2 } from 'lucide-react';
 import EmployeeCard from '../components/EmployeeCard';
 import WorkloadIndicator from '../components/WorkloadIndicator';
 import { userAPI, aiAPI, skillAPI } from '../services/api';
+import { useSearch } from '../contexts/SearchContext';
 
 export default function TeamOverview() {
   const [employees, setEmployees] = useState([]);
@@ -178,6 +179,15 @@ export default function TeamOverview() {
     );
   }
 
+  const { searchQuery } = useSearch();
+
+  const filteredEmployees = employees.filter(emp => 
+    emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    emp.userId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (emp.email && emp.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
+    emp.skills?.some(skill => skill.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sticky top-16 bg-slate-50/95 backdrop-blur-sm z-30 py-4 border-b border-slate-200/50 mb-10">
@@ -200,7 +210,7 @@ export default function TeamOverview() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {employees.map(employee => (
+        {filteredEmployees.map(employee => (
           <EmployeeCard
             key={employee._id}
             employee={employee}
