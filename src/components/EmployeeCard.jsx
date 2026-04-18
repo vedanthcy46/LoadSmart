@@ -30,8 +30,8 @@ export default function EmployeeCard({ employee, onClick }) {
       <div className="space-y-3">
         <div className="flex items-center gap-2 text-sm">
           <Star className="w-4 h-4 text-amber-500" />
-          <span className="text-slate-600">Performance:</span>
-          <span className="font-medium text-slate-800">{employee.performanceScore}%</span>
+          <span className="text-slate-600">Productivity:</span>
+          <span className="font-medium text-slate-800">{employee.productivityScore || 0}%</span>
         </div>
 
         <div className="flex items-center gap-2 text-sm">

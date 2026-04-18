@@ -12,10 +12,31 @@ router.get('/', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Access denied' });
     }
-    const users = await User.find()
+    const employees = await User.find({ role: 'employee' })
       .select('-password')
       .sort({ createdAt: -1 });
-    res.json(users);
+    
+    const tasks = await Task.find();
+
+    const teamData = employees.map(employee => {
+      const employeeTasks = tasks.filter(t => t.assignedTo === employee.userId);
+      const activeTasks = employeeTasks.filter(t => t.status === 'Pending' || t.status === 'In Progress').length;
+      const dynamicWorkload = Math.round((activeTasks / (employee.capacity || 50)) * 100);
+      const completedCount = employeeTasks.filter(t => t.status === 'Completed').length;
+      const productivityScore = calculateProductivityScore(completedCount, employeeTasks.length);
+      const workloadStatus = getWorkloadStatus(dynamicWorkload);
+
+      return {
+        ...employee.toObject(),
+        workload: dynamicWorkload,
+        workloadStatus,
+        productivityScore,
+        taskCount: employeeTasks.length,
+        completedTaskCount: completedCount
+      };
+    });
+
+    res.json(teamData);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
