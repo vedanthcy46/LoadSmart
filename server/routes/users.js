@@ -70,8 +70,19 @@ router.post('/', authenticateToken, async (req, res) => {
     // Auto-generate userId if not provided
     let finalUserId = userId;
     if (!finalUserId) {
-      const count = await User.countDocuments();
-      finalUserId = (role === 'admin' ? 'ADM' : 'EMP') + (count + 1).toString().padStart(3, '0');
+      let count = await User.countDocuments();
+      let isUnique = false;
+      let attempts = 0;
+      
+      while (!isUnique && attempts < 100) {
+        attempts++;
+        const nextId = (role === 'admin' ? 'ADM' : 'EMP') + (count + attempts).toString().padStart(3, '0');
+        const existing = await User.findOne({ userId: nextId });
+        if (!existing) {
+          finalUserId = nextId;
+          isUnique = true;
+        }
+      }
     }
 
     const user = new User({
