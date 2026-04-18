@@ -88,12 +88,23 @@ export default function TeamOverview() {
       return;
     }
 
-    console.log('[Auth Debug] Saving Employee. Mode:', editMode ? 'Edit' : 'Create', 'Selected:', selectedEmployee?.userId);
+    console.log('[Auth Debug] Saving Employee. Full State:', { 
+      editMode, 
+      selectedEmployeeId: selectedEmployee?.userId,
+      fullSelected: selectedEmployee,
+      formDataId: formData.userId
+    });
     
     try {
-      if (editMode && selectedEmployee) {
+      if (editMode && selectedEmployee?.userId) {
+        console.log('[Auth Debug] Attempting PUT update for:', selectedEmployee.userId);
         await userAPI.update(selectedEmployee.userId, formData);
+      } else if (editMode && !selectedEmployee?.userId) {
+        console.error('[Auth Debug] ERROR: Edit mode is TRUE but selectedEmployee.userId is MISSING!');
+        alert('Error: Could not identify which employee to update. Please close and try again.');
+        return;
       } else {
+        console.log('[Auth Debug] Attempting POST create');
         await userAPI.create(formData);
       }
       setShowAddModal(false);
