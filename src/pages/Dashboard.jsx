@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend
@@ -11,6 +12,7 @@ import { useSearch } from '../contexts/SearchContext';
 const COLORS = ['#06b6d4', '#f59e0b', '#ef4444', '#10b981'];
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [teamData, setTeamData] = useState([]);
   const [workloadDist, setWorkloadDist] = useState(null);
@@ -98,24 +100,28 @@ export default function Dashboard() {
           value={stats?.totalEmployees || 0}
           icon={Users}
           color="cyan"
+          onClick={() => navigate('/admin/analytics/employees')}
         />
         <StatCard
           title="Total Tasks"
           value={stats?.totalTasks || 0}
           icon={ClipboardCheck}
           color="green"
+          onClick={() => navigate('/admin/analytics/tasks')}
         />
         <StatCard
           title="Avg Productivity"
           value={`${stats?.avgProductivity || 0}%`}
           icon={TrendingUp}
           color="amber"
+          onClick={() => navigate('/admin/analytics/productivity')}
         />
         <StatCard
           title="Overloaded"
           value={stats?.overloadedCount || 0}
           icon={AlertTriangle}
           color="rose"
+          onClick={() => navigate('/admin/analytics/overloaded')}
         />
       </div>
 

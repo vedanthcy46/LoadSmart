@@ -58,4 +58,11 @@ export const skillAPI = {
   create: (name) => api.post('/skills', { name })
 };
 
+export const analyticsAPI = {
+  getEmployees: (filter) => api.get('/analytics/employees', { params: { filter } }),
+  getTasks: (filter) => api.get('/analytics/tasks', { params: { filter } }),
+  getProductivity: (filter) => api.get('/analytics/productivity', { params: { filter } }),
+  getOverloaded: () => api.get('/analytics/overloaded')
+};
+
 export default api;

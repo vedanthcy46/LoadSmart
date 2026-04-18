@@ -7,6 +7,10 @@ import TaskAllocation from '../pages/TaskAllocation';
 import TeamOverview from '../pages/TeamOverview';
 import Notifications from '../pages/Notifications';
 import Profile from '../pages/Profile';
+import EmployeeAnalytics from '../pages/analytics/EmployeeAnalytics';
+import TaskAnalytics from '../pages/analytics/TaskAnalytics';
+import ProductivityAnalytics from '../pages/analytics/ProductivityAnalytics';
+import OverloadedAnalytics from '../pages/analytics/OverloadedAnalytics';
 
 export default function AdminLayout() {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -22,6 +26,10 @@ export default function AdminLayout() {
                     <Route path="/team" element={<TeamOverview />} />
                     <Route path="/notifications" element={<Notifications />} />
                     <Route path="/profile" element={<Profile />} />
+                    <Route path="/analytics/employees" element={<EmployeeAnalytics />} />
+                    <Route path="/analytics/tasks" element={<TaskAnalytics />} />
+                    <Route path="/analytics/productivity" element={<ProductivityAnalytics />} />
+                    <Route path="/analytics/overloaded" element={<OverloadedAnalytics />} />
                 </Routes>
             </main>
         </div>

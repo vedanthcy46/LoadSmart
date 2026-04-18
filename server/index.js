@@ -68,6 +68,7 @@ import authRouter from './routes/auth.js';
 import profileRouter from './routes/profile.js';
 import skillsRouter from './routes/skills.js';
 import feedbackRouter from './routes/feedback.js';
+import analyticsRouter from './routes/analytics.js';
 import Skill from './models/Skill.js';
 import User from './models/User.js';
 
@@ -104,6 +105,7 @@ const seedDB = async () => {
 
 mongoose.connection.once('open', seedDB);
 
+app.use('/api/analytics', analyticsRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/employees', usersRouter); // Maintain alias for frontend compatibility for now
 app.use('/api/tasks', tasksRouter);

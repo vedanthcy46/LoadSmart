@@ -1,4 +1,4 @@
-export default function StatCard({ title, value, subtitle, icon: Icon, trend, color = 'cyan' }) {
+export default function StatCard({ title, value, subtitle, icon: Icon, trend, color = 'cyan', onClick }) {
   const colorClasses = {
     cyan: 'from-cyan-500 to-blue-600',
     green: 'from-emerald-500 to-green-600',
@@ -8,7 +8,10 @@ export default function StatCard({ title, value, subtitle, icon: Icon, trend, co
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow">
+    <div 
+      onClick={onClick}
+      className={`bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-all ${onClick ? 'cursor-pointer hover:border-cyan-200' : ''}`}
+    >
       <div className="flex items-start justify-between">
         <div>
           <p className="text-sm font-medium text-slate-500">{title}</p>
