@@ -21,8 +21,13 @@ router.get('/', authenticateToken, async (req, res) => {
 
     const teamData = employees.map(employee => {
       const employeeTasks = tasks.filter(t => t.assignedTo === employee.userId);
-      const activeTasks = employeeTasks.filter(t => t.status === 'Pending' || t.status === 'In Progress').length;
-      const dynamicWorkload = Math.round((activeTasks / (employee.capacity || 50)) * 100);
+      // ✅ CORRECT: workload = (totalAssignedTaskHours / capacity) * 100
+      const activeTasks = employeeTasks.filter(t => 
+        t.status === 'Pending' || t.status === 'In Progress' || t.status === 'Under Review'
+      );
+      const totalHours = activeTasks.reduce((sum, t) => sum + (t.estimatedHours || 0), 0);
+      const capacity = employee.capacity || 6;
+      const dynamicWorkload = Math.round((totalHours / capacity) * 100);
       const completedCount = employeeTasks.filter(t => t.status === 'Completed').length;
       const productivityScore = calculateProductivityScore(completedCount, employeeTasks.length);
       const workloadStatus = getWorkloadStatus(dynamicWorkload);
@@ -30,6 +35,7 @@ router.get('/', authenticateToken, async (req, res) => {
       return {
         ...employee.toObject(),
         workload: dynamicWorkload,
+        currentLoadHours: totalHours,
         workloadStatus,
         productivityScore,
         taskCount: employeeTasks.length,

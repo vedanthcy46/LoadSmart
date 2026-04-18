@@ -57,7 +57,9 @@ export const findBestEmployee = (employees, requiredSkills) => {
   let bestMetrics = null;
 
   for (const employee of employees) {
-    if (employee.workload >= 100) continue;
+    // 🧠 SMART RULE: Skip employees with workload >= 80% or high stress
+    if ((employee.workload || 0) >= 80) continue;
+    if ((employee.stressLevel || 1) > 3) continue;
 
     const metrics = calculateAllocationScore(employee, requiredSkills);
 
@@ -72,7 +74,7 @@ export const findBestEmployee = (employees, requiredSkills) => {
 };
 
 export const getWorkloadStatus = (workload) => {
-  if (workload < 40) return { status: 'low', color: 'green', label: 'Low' };
+  if (workload < 50) return { status: 'low', color: 'green', label: 'Low' };
   if (workload <= 80) return { status: 'balanced', color: 'yellow', label: 'Balanced' };
   return { status: 'overloaded', color: 'red', label: 'Overloaded' };
 };

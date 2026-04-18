@@ -9,6 +9,7 @@ import { refreshWorkload } from '../utils/workload.js';
 
 const router = express.Router();
 
+// ===== GET ALL TASKS =====
 router.get('/', authenticateToken, async (req, res) => {
   try {
     const { status, employeeId } = req.query;
@@ -43,6 +44,7 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
+// ===== GET SINGLE TASK =====
 router.get('/:id', async (req, res) => {
   try {
     const task = await Task.findById(req.params.id);
@@ -60,10 +62,12 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// ===== CREATE TASK (MANUAL) =====
 router.post('/', async (req, res) => {
   try {
     const task = new Task(req.body);
     await task.save();
+    // Recalculate workload using the correct formula
     if (task.assignedTo) await refreshWorkload(task.assignedTo);
     res.status(201).json(task);
   } catch (error) {
@@ -71,6 +75,7 @@ router.post('/', async (req, res) => {
   }
 });
 
+// ===== AI AUTO-ASSIGN =====
 router.post('/auto-assign', async (req, res) => {
   try {
     const { title, description, priority, requiredSkills, estimatedHours, deadline } = req.body;
@@ -79,22 +84,29 @@ router.post('/auto-assign', async (req, res) => {
       return res.status(400).json({ error: 'requiredSkills array is required' });
     }
 
-    // Fetch all employees from MongoDB
-    const employees = await User.find({ role: 'employee' }); // filter out admins if they shouldn't get tasks
+    const employees = await User.find({ role: 'employee' });
     if (employees.length === 0) {
       return res.status(400).json({ error: 'No employees found in database' });
     }
 
-    // Filter employees who possess at least one of the required skills
+    // 🧠 SMART TASK ASSIGNMENT RULE:
+    // Only consider employees with workload < 80% AND stressLevel <= 3
     const filteredEmployees = employees.filter(employee => {
       if (!employee.skills || !Array.isArray(employee.skills)) return false;
-      return requiredSkills.some(reqSkill =>
+      
+      // Check skill match
+      const hasSkill = requiredSkills.some(reqSkill =>
         employee.skills.some(skill => skill.toLowerCase().includes(reqSkill.toLowerCase()))
       );
+      
+      // Check workload and stress constraints
+      const isAvailable = (employee.workload || 0) < 80 && (employee.stressLevel || 1) <= 3;
+      
+      return hasSkill && isAvailable;
     });
 
     if (filteredEmployees.length === 0) {
-      return res.status(400).json({ error: 'No employees with matching skills found' });
+      return res.status(400).json({ error: 'No eligible employees found (all matching employees are overloaded or stressed)' });
     }
 
     // Use AI to split the task and assign to employees
@@ -103,7 +115,6 @@ router.post('/auto-assign', async (req, res) => {
       aiResult = await generateAITaskAssignment(title, description, requiredSkills, estimatedHours, filteredEmployees);
     } catch (aiError) {
       console.error('AI assignment failed, using fallback:', aiError.message);
-      // Fallback: assign everything to the first eligible person
       aiResult = {
         assignments: [{
           employeeId: filteredEmployees[0].userId,
@@ -142,22 +153,13 @@ router.post('/auto-assign', async (req, res) => {
       await task.save();
       createdTasks.push(task);
 
-      // Update employee workload based on hours
-      // Logic: 1 hour of work adds 2.5% workload (40 hours = 100% workload)
-      const workloadImpact = assignment.hours * 2.5;
-      selectedEmployee.workload = Math.min(100, (selectedEmployee.workload || 0) + workloadImpact);
-      selectedEmployee.currentLoad = (selectedEmployee.currentLoad || 0) + 1;
+      // ✅ Use refreshWorkload for CORRECT formula: (totalHours / capacity) * 100
+      await refreshWorkload(selectedEmployee.userId);
+
+      // Update total tasks counter
       selectedEmployee.totalTasks = (selectedEmployee.totalTasks || 0) + 1;
-
-      if (selectedEmployee.workload > 80) {
-        selectedEmployee.status = 'overloaded';
-      } else if (selectedEmployee.workload > 40) {
-        selectedEmployee.status = 'busy';
-      } else {
-        selectedEmployee.status = 'available';
-      }
-
       await selectedEmployee.save();
+
       updatedEmployees.push({
         id: selectedEmployee._id,
         userId: selectedEmployee.userId,
@@ -186,6 +188,7 @@ router.post('/auto-assign', async (req, res) => {
   }
 });
 
+// ===== REASSIGN OVERLOADED =====
 router.post('/reassign-overloaded/:userId', authenticateToken, async (req, res) => {
   try {
     const { userId } = req.params;
@@ -236,28 +239,6 @@ router.post('/reassign-overloaded/:userId', authenticateToken, async (req, res) 
         task.aiExplanation = `Automatically reassigned from ${overloadedEmp.name}: ${item.reason}`;
         await task.save();
 
-        // Update workloads
-        const workloadImpact = task.estimatedHours * 2.5;
-        
-        // Remove from old
-        overloadedEmp.workload = Math.max(0, (overloadedEmp.workload || 0) - workloadImpact);
-        overloadedEmp.currentLoad = Math.max(0, (overloadedEmp.currentLoad || 0) - 1);
-        
-        // Add to new
-        newEmp.workload = Math.min(100, (newEmp.workload || 0) + workloadImpact);
-        newEmp.currentLoad = (newEmp.currentLoad || 0) + 1;
-        newEmp.totalTasks = (newEmp.totalTasks || 0) + 1;
-
-        // Recalculate statuses
-        [overloadedEmp, newEmp].forEach(emp => {
-          if (emp.workload > 80) emp.status = 'overloaded';
-          else if (emp.workload > 40) emp.status = 'busy';
-          else emp.status = 'available';
-        });
-
-        await overloadedEmp.save();
-        await newEmp.save();
-
         // Notify new employee
         await createNotification(
           newEmp.userId,
@@ -270,6 +251,12 @@ router.post('/reassign-overloaded/:userId', authenticateToken, async (req, res) 
       }
     }
 
+    // ✅ Recalculate ALL affected employees using the correct formula
+    await refreshWorkload(userId); // Old owner
+    for (const item of reassignments) {
+      await refreshWorkload(item.newEmployeeId); // New owners
+    }
+
     res.json({ message: 'Reassignment successful', results });
   } catch (error) {
     console.error('Reassignment Error:', error);
@@ -277,6 +264,7 @@ router.post('/reassign-overloaded/:userId', authenticateToken, async (req, res) 
   }
 });
 
+// ===== AI SUGGESTION =====
 router.post('/suggest', async (req, res) => {
   try {
     const { title, requiredSkills, priority } = req.body;
@@ -298,59 +286,64 @@ router.post('/suggest', async (req, res) => {
   }
 });
 
+// ===== UPDATE TASK STATUS =====
 router.put('/:id/status', authenticateToken, async (req, res) => {
   try {
-    const { status } = req.body; // e.g. "Completed", "In Progress"
+    const { status } = req.body;
     
     if (req.user.role === 'employee' && status === 'Completed') {
       return res.status(403).json({ error: 'Employees cannot mark tasks as Completed. Please submit for "Under Review" instead.' });
     }
 
+    // MUST fetch the task FIRST before referencing it
+    const task = await Task.findById(req.params.id);
+    if (!task) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+
     if (status === 'Under Review' && req.user.role === 'employee') {
-      // Notify Admin that a task is ready for review
       await createNotification(
-        'admin', // Assuming 'admin' is the generic identifier or logic handles it
-        `Employee ${req.user.username} submitted "${task.title}" for review.`,
+        'admin',
+        `Employee ${req.user.username || req.user.id} submitted "${task.title}" for review.`,
         'task_review',
         task._id
       );
     }
 
-    const task = await Task.findById(req.params.id);
-
-    if (!task) {
-      return res.status(404).json({ error: 'Task not found' });
-    }
-
     const previousStatus = task.status;
     task.status = status;
 
+    // 🔄 AUTO CAPACITY ADJUSTMENT on task completion
     if (status === 'Completed' && previousStatus !== 'Completed') {
       task.completionTime = new Date();
       const employee = await User.findOne({ userId: task.assignedTo });
       if (employee) {
         employee.completedTasks += 1;
+
+        // Recalculate productivity for capacity adjustment decision
+        const allTasks = await Task.find({ assignedTo: employee.userId });
+        const completedCount = allTasks.filter(t => t.status === 'Completed').length + 1; // +1 for this task
+        const prodScore = allTasks.length > 0 ? Math.round((completedCount / allTasks.length) * 100) : 0;
+        employee.productivityScore = prodScore;
         
-        // 🔄 AUTO CAPACITY ADJUSTMENT
-        // Case 1: High Performer
-        if (employee.productivityScore > 80 && employee.stressLevel < 3 && employee.workload < 70) {
-          employee.capacity = Math.min(20, (employee.capacity || 8) + 1); // Max 20 hours
-          console.log(`[Capacity] Increased for ${employee.userId} (High Performance)`);
+        // Case 1: High Performer (productivity > 80%, stress < 3, workload < 70%)
+        if (prodScore > 80 && employee.stressLevel < 3 && employee.workload < 70) {
+          employee.capacity = Math.min(20, (employee.capacity || 6) + 1);
+          console.log(`[Capacity] Increased for ${employee.userId} → ${employee.capacity}h (High Performance)`);
         } 
-        // Case 2: Overloaded/Stressed
+        // Case 2: Overloaded/Stressed (workload > 85%, stress > 3)
         else if (employee.workload > 85 && employee.stressLevel > 3) {
-          employee.capacity = Math.max(2, (employee.capacity || 8) - 1); // Min 2 hours
-          console.log(`[Capacity] Reduced for ${employee.userId} (Overloaded/Stressed)`);
+          employee.capacity = Math.max(2, (employee.capacity || 6) - 1);
+          console.log(`[Capacity] Reduced for ${employee.userId} → ${employee.capacity}h (Overloaded/Stressed)`);
         }
 
         await employee.save();
-        await refreshWorkload(task.assignedTo);
       }
     }
 
     await task.save();
     
-    // Sync workloads for the involved user
+    // ✅ Always recalculate using the correct formula after any status change
     await refreshWorkload(task.assignedTo);
 
     const emp = await User.findOne({ userId: task.assignedTo });
@@ -363,6 +356,7 @@ router.put('/:id/status', authenticateToken, async (req, res) => {
   }
 });
 
+// ===== UPDATE TASK =====
 router.put('/:id', async (req, res) => {
   try {
     const oldTask = await Task.findById(req.params.id);
@@ -377,7 +371,7 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Task not found' });
     }
     
-    // Sync both old and new assignees
+    // ✅ Recalculate both old and new assignees
     if (oldAssignee) await refreshWorkload(oldAssignee);
     if (task.assignedTo && task.assignedTo !== oldAssignee) await refreshWorkload(task.assignedTo);
 
@@ -391,6 +385,7 @@ router.put('/:id', async (req, res) => {
   }
 });
 
+// ===== DELETE TASK =====
 router.delete('/:id', async (req, res) => {
   try {
     const task = await Task.findById(req.params.id);
@@ -400,6 +395,7 @@ router.delete('/:id', async (req, res) => {
     const assignee = task.assignedTo;
     await Task.findByIdAndDelete(req.params.id);
     
+    // ✅ Recalculate after deletion
     if (assignee) await refreshWorkload(assignee);
     res.json({ message: 'Task deleted' });
   } catch (error) {

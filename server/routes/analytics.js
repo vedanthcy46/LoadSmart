@@ -21,10 +21,21 @@ const getDateFilter = (filter) => {
       startDate = new Date(now.setDate(now.getDate() - 30));
       break;
     default:
-      startDate = new Date(now.setDate(now.getDate() - 7)); // Default to weekly
+      startDate = new Date(now.setDate(now.getDate() - 7));
   }
 
   return { createdAt: { $gte: startDate } };
+};
+
+// ✅ CORRECT workload helper used everywhere
+const calcWorkload = (userId, tasks, capacity) => {
+  const activeTasks = tasks.filter(t => 
+    t.assignedTo === userId && 
+    (t.status === 'Pending' || t.status === 'In Progress' || t.status === 'Under Review')
+  );
+  const totalHours = activeTasks.reduce((sum, t) => sum + (t.estimatedHours || 0), 0);
+  const cap = capacity || 6;
+  return Math.round((totalHours / cap) * 100);
 };
 
 // 1. Employee Analytics
@@ -38,7 +49,7 @@ router.get('/employees', authenticateToken, async (req, res) => {
     const dateFilter = getDateFilter(filter);
 
     const employees = await User.find({ role: 'employee', ...dateFilter });
-    const allEmployees = await User.find({ role: 'employee' }); // For distribution charts
+    const allEmployees = await User.find({ role: 'employee' });
     const tasks = await Task.find();
 
     // Skills distribution
@@ -52,20 +63,18 @@ router.get('/employees', authenticateToken, async (req, res) => {
 
     // Capacity vs Workload
     const workloadData = allEmployees.map(emp => {
+      const workload = calcWorkload(emp.userId, tasks, emp.capacity);
       const empTasks = tasks.filter(t => t.assignedTo === emp.userId);
-      const currentWorkload = Math.round(emp.workload || 0);
       
-      const breakdown = {
-        pending: empTasks.filter(t => t.status === 'Pending').length,
-        inProgress: empTasks.filter(t => t.status === 'In Progress').length,
-        completed: empTasks.filter(t => t.status === 'Completed').length
-      };
-
       return {
         name: emp.name,
-        capacity: emp.capacity || 50,
-        workload: currentWorkload,
-        breakdown
+        capacity: emp.capacity || 6,
+        workload,
+        breakdown: {
+          pending: empTasks.filter(t => t.status === 'Pending').length,
+          inProgress: empTasks.filter(t => t.status === 'In Progress').length,
+          completed: empTasks.filter(t => t.status === 'Completed').length
+        }
       };
     });
 
@@ -73,13 +82,14 @@ router.get('/employees', authenticateToken, async (req, res) => {
       totalEmployees: employees.length,
       employees: employees.map(e => {
         const empTasks = tasks.filter(t => t.assignedTo === e.userId);
+        const workload = calcWorkload(e.userId, tasks, e.capacity);
         return {
           userId: e.userId,
           name: e.name,
           email: e.email,
           skills: e.skills,
-          capacity: e.capacity,
-          workload: e.workload,
+          capacity: e.capacity || 6,
+          workload,
           stressLevel: e.stressLevel,
           taskBreakdown: {
             pending: empTasks.filter(t => t.status === 'Pending').length,
@@ -107,7 +117,6 @@ router.get('/tasks', authenticateToken, async (req, res) => {
     const dateFilter = getDateFilter(filter);
 
     const tasks = await Task.find(dateFilter);
-    const allTasks = await Task.find();
 
     const statusBreakdown = {
       pending: tasks.filter(t => t.status === 'Pending').length,
@@ -121,7 +130,6 @@ router.get('/tasks', authenticateToken, async (req, res) => {
       { name: 'Low', value: tasks.filter(t => t.priority === 'Low').length }
     ];
 
-    // Task trends (group by day)
     const trends = {};
     tasks.forEach(task => {
       const date = task.createdAt.toISOString().split('T')[0];
@@ -174,7 +182,6 @@ router.get('/productivity', authenticateToken, async (req, res) => {
       };
     }).sort((a, b) => b.score - a.score);
 
-    // Productivity trend over time
     const trends = {};
     tasks.filter(t => t.status === 'Completed').forEach(task => {
       const date = task.createdAt.toISOString().split('T')[0];
@@ -201,17 +208,20 @@ router.get('/overloaded', authenticateToken, async (req, res) => {
     }
 
     const employees = await User.find({ role: 'employee' });
-    const tasks = await Task.find({ status: { $in: ['Pending', 'In Progress'] } });
+    const tasks = await Task.find({ status: { $in: ['Pending', 'In Progress', 'Under Review'] } });
 
     const overloadedEmployees = employees.map(emp => {
       const empTasks = tasks.filter(t => t.assignedTo === emp.userId);
-      const workload = Math.round(emp.workload || 0);
+      const totalHours = empTasks.reduce((sum, t) => sum + (t.estimatedHours || 0), 0);
+      const capacity = emp.capacity || 6;
+      const workload = Math.round((totalHours / capacity) * 100);
       
       return {
         userId: emp.userId,
         name: emp.name,
         workload,
-        capacity: emp.capacity || 50,
+        capacity,
+        currentLoadHours: totalHours,
         currentLoad: empTasks.length,
         stressLevel: emp.stressLevel
       };

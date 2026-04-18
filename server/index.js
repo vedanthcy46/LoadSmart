@@ -72,6 +72,8 @@ import analyticsRouter from './routes/analytics.js';
 import Skill from './models/Skill.js';
 import User from './models/User.js';
 
+import { refreshWorkload } from './utils/workload.js';
+
 // Seed default skills and admin
 const seedDB = async () => {
   try {
@@ -98,8 +100,16 @@ const seedDB = async () => {
       await admin.save();
       console.log('Seeded default admin (ADM001 / admin123).');
     }
+
+    // 🔄 STARTUP SYNC: Recalculate ALL employee workloads using the correct formula
+    console.log('[Startup] Syncing all employee workloads...');
+    const allEmployees = await User.find({ role: 'employee' });
+    for (const emp of allEmployees) {
+      await refreshWorkload(emp.userId);
+    }
+    console.log(`[Startup] Synced workloads for ${allEmployees.length} employees.`);
   } catch (error) {
-    console.error('Failed to seed database:', error.message);
+    console.error('Failed to seed/sync database:', error.message);
   }
 };
 
