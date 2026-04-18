@@ -15,6 +15,12 @@ export default function TaskCard({ task, onStatusChange }) {
     Completed: CheckCircle2
   };
 
+  const isAssignedToMe = typeof task.assignedTo === 'object' 
+    ? task.assignedTo.userId === user?.id 
+    : task.assignedTo === user?.id;
+
+  const isOffloaded = task.previousAssignee === user?.id && !isAssignedToMe;
+
   const statusColors = {
     Pending: 'text-slate-400',
     'In Progress': 'text-blue-500',
@@ -35,9 +41,16 @@ export default function TaskCard({ task, onStatusChange }) {
             <p className="text-sm text-slate-500 line-clamp-2">{task.description}</p>
           )}
         </div>
-        <span className={`px-2 py-1 text-xs font-medium rounded-md border ${priorityColors[task.priority] || ''}`}>
-          {task.priority ? task.priority.toUpperCase() : ''}
-        </span>
+        <div className="flex flex-col items-end gap-2">
+          <span className={`px-2 py-1 text-xs font-medium rounded-md border ${priorityColors[task.priority] || ''}`}>
+            {task.priority ? task.priority.toUpperCase() : ''}
+          </span>
+          {isOffloaded && (
+            <span className="px-2 py-1 text-[10px] font-bold rounded-md border bg-slate-100 text-slate-500 border-slate-200">
+              OFFLOADED
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500 mb-3">
@@ -73,7 +86,7 @@ export default function TaskCard({ task, onStatusChange }) {
         </div>
       )}
 
-      {task.status !== 'Completed' && onStatusChange && (
+      {task.status !== 'Completed' && onStatusChange && isAssignedToMe && (
         <div className="flex gap-2 pt-2 border-t border-slate-100">
           {user?.role === 'employee' && task.status === 'Pending' && (
             <button

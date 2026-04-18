@@ -13,9 +13,12 @@ router.get('/', authenticateToken, async (req, res) => {
     const { status, employeeId } = req.query;
     let query = {};
     
-    // Security: Employees only see their own tasks
+    // Security: Employees see their own tasks AND tasks offloaded from them
     if (req.user.role === 'employee') {
-      query.assignedTo = req.user.id;
+      query.$or = [
+        { assignedTo: req.user.id },
+        { previousAssignee: req.user.id }
+      ];
     } else if (employeeId) {
       query.assignedTo = employeeId;
     }
@@ -226,6 +229,7 @@ router.post('/reassign-overloaded/:userId', authenticateToken, async (req, res) 
 
       if (task && newEmp) {
         // Update task
+        task.previousAssignee = task.assignedTo; // Store old owner
         task.assignedTo = newEmp.userId;
         task.aiExplanation = `Automatically reassigned from ${overloadedEmp.name}: ${item.reason}`;
         await task.save();

@@ -19,6 +19,7 @@ const taskSchema = new mongoose.Schema({
   aiExplanation: { type: String },
   deadline: { type: Date },
   completionTime: { type: Date }, // Prompt uses completionTime
+  previousAssignee: { type: String }, // Track who the task was taken from
   createdAt: { type: Date, default: Date.now }
 });
 
