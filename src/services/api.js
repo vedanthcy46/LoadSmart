@@ -21,6 +21,7 @@ export const taskAPI = {
   suggest: (data) => api.post('/tasks/suggest', data),
   updateStatus: (id, status) => api.put(`/tasks/${id}/status`, { status }),
   update: (id, data) => api.put(`/tasks/${id}`, data),
+  reassignOverloaded: (userId) => api.post(`/tasks/reassign-overloaded/${userId}`),
   delete: (id) => api.delete(`/tasks/${id}`)
 };
 

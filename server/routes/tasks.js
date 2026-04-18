@@ -181,6 +181,96 @@ router.post('/auto-assign', async (req, res) => {
   }
 });
 
+router.post('/reassign-overloaded/:userId', authenticateToken, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    // 1. Find the overloaded employee
+    const overloadedEmp = await User.findOne({ userId });
+    if (!overloadedEmp) return res.status(404).json({ error: 'Employee not found' });
+
+    // 2. Find their active tasks
+    const tasks = await Task.find({ 
+      assignedTo: userId, 
+      status: { $in: ['Pending', 'In Progress'] } 
+    });
+
+    if (tasks.length === 0) {
+      return res.status(400).json({ error: 'No active tasks found for this employee to reassign.' });
+    }
+
+    // 3. Get all other employees
+    const otherEmployees = await User.find({ 
+      userId: { $ne: userId },
+      role: 'employee'
+    });
+
+    if (otherEmployees.length === 0) {
+      return res.status(400).json({ error: 'No other employees available for reassignment.' });
+    }
+
+    // 4. Use AI to find best reassignment
+    const { generateAIReassignment } = await import('../utils/ai.js');
+    const reassignments = await generateAIReassignment(tasks, otherEmployees);
+
+    if (reassignments.length === 0) {
+      return res.status(500).json({ error: 'AI failed to suggest reassignments. Please try manual reassignment.' });
+    }
+
+    const results = [];
+
+    // 5. Execute reassignments
+    for (const item of reassignments) {
+      const task = await Task.findById(item.taskId);
+      const newEmp = await User.findOne({ userId: item.newEmployeeId });
+
+      if (task && newEmp) {
+        // Update task
+        task.assignedTo = newEmp.userId;
+        task.aiExplanation = `Automatically reassigned from ${overloadedEmp.name}: ${item.reason}`;
+        await task.save();
+
+        // Update workloads
+        const workloadImpact = task.estimatedHours * 2.5;
+        
+        // Remove from old
+        overloadedEmp.workload = Math.max(0, (overloadedEmp.workload || 0) - workloadImpact);
+        overloadedEmp.currentLoad = Math.max(0, (overloadedEmp.currentLoad || 0) - 1);
+        
+        // Add to new
+        newEmp.workload = Math.min(100, (newEmp.workload || 0) + workloadImpact);
+        newEmp.currentLoad = (newEmp.currentLoad || 0) + 1;
+        newEmp.totalTasks = (newEmp.totalTasks || 0) + 1;
+
+        // Recalculate statuses
+        [overloadedEmp, newEmp].forEach(emp => {
+          if (emp.workload > 80) emp.status = 'overloaded';
+          else if (emp.workload > 40) emp.status = 'busy';
+          else emp.status = 'available';
+        });
+
+        await overloadedEmp.save();
+        await newEmp.save();
+
+        // Notify new employee
+        await createNotification(
+          newEmp.userId,
+          `Task "${task.title}" has been reassigned to you from ${overloadedEmp.name} (AI Optimization)`,
+          'task_assigned',
+          task._id
+        );
+
+        results.push({ task: task.title, to: newEmp.name });
+      }
+    }
+
+    res.json({ message: 'Reassignment successful', results });
+  } catch (error) {
+    console.error('Reassignment Error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 router.post('/suggest', async (req, res) => {
   try {
     const { title, requiredSkills, priority } = req.body;

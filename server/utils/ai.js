@@ -199,3 +199,67 @@ Return ONLY structured JSON in this format:
     return ["Take a short break to clear your mind.", "Focus on one high-priority task at a time."];
   }
 };
+
+export const generateAIReassignment = async (tasks, employees) => {
+  const employeeListJson = employees.map(emp => ({
+    userId: emp.userId,
+    name: emp.name,
+    skills: emp.skills,
+    performanceScore: emp.performanceScore,
+    currentLoad: emp.currentLoad,
+    workload: emp.workload,
+    stressLevel: emp.stressLevel || 1
+  }));
+
+  const tasksJson = tasks.map(t => ({
+    id: t._id,
+    title: t.title,
+    requiredSkills: t.requiredSkills,
+    estimatedHours: t.estimatedHours
+  }));
+
+  const prompt = `You are an expert AI workforce optimizer. 
+Your goal is to REASSIGN tasks from an overloaded employee to the most suitable alternative employees.
+
+Tasks to reassign:
+${JSON.stringify(tasksJson, null, 2)}
+
+Available Employees (excluding the overloaded one):
+${JSON.stringify(employeeListJson, null, 2)}
+
+Criteria:
+1. Skill Match: Highest priority.
+2. Workload: Prefer employees with lower workload (under 60%).
+3. Stress Level: Prefer employees with stress level 1-2.
+4. Performance: Prefer employees with higher performance scores for complex tasks.
+
+Return ONLY structured JSON in this format:
+{
+  "reassignments": [
+    {
+      "taskId": "task_mongodb_id",
+      "newEmployeeId": "userId",
+      "reason": "short explanation"
+    }
+  ]
+}`;
+
+  try {
+    const response = await groq.chat.completions.create({
+      model: GROQ_MODEL,
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.1,
+      max_tokens: 1000
+    });
+
+    const aiResponse = response.choices[0].message.content.trim();
+    const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]).reassignments || [];
+    }
+    return [];
+  } catch (error) {
+    console.error('Groq API Error in reassignment:', error.message);
+    return [];
+  }
+};

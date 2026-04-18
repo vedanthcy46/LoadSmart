@@ -3,29 +3,49 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   Cell
 } from 'recharts';
-import { AlertTriangle, ArrowLeft, User, Zap, MessageSquare } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, User, Zap, MessageSquare, Loader2, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { analyticsAPI } from '../../services/api';
+import { analyticsAPI, taskAPI } from '../../services/api';
 
 export default function OverloadedAnalytics() {
   const navigate = useNavigate();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [reassigning, setReassigning] = useState(null); // ID of user being reassigned
+  const [success, setSuccess] = useState(null);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const res = await analyticsAPI.getOverloaded();
+      setData(res.data);
+    } catch (error) {
+      console.error('Failed to fetch overloaded analytics:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const res = await analyticsAPI.getOverloaded();
-        setData(res.data);
-      } catch (error) {
-        console.error('Failed to fetch overloaded analytics:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchData();
   }, []);
+
+  const handleReassign = async (userId) => {
+    try {
+      setReassigning(userId);
+      await taskAPI.reassignOverloaded(userId);
+      setSuccess(userId);
+      setTimeout(() => {
+        setSuccess(null);
+        fetchData(); // Refresh list
+      }, 3000);
+    } catch (error) {
+      console.error('Reassignment failed:', error);
+      alert('Failed to reassign tasks automatically. Please try manual reassignment.');
+    } finally {
+      setReassigning(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -121,10 +141,27 @@ export default function OverloadedAnalytics() {
                       </div>
                     </div>
                     <button 
-                      onClick={() => navigate('/admin/tasks')}
-                      className="px-3 py-1.5 bg-white border border-rose-200 text-rose-600 rounded-lg text-xs font-bold hover:bg-rose-50 transition-colors shadow-sm"
+                      onClick={() => handleReassign(emp.userId)}
+                      disabled={reassigning === emp.userId || success === emp.userId}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-2 ${
+                        success === emp.userId 
+                        ? 'bg-emerald-500 text-white' 
+                        : 'bg-white border border-rose-200 text-rose-600 hover:bg-rose-50'
+                      } disabled:opacity-50`}
                     >
-                      Reassign Tasks
+                      {reassigning === emp.userId ? (
+                        <>
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          Reassigning...
+                        </>
+                      ) : success === emp.userId ? (
+                        <>
+                          <CheckCircle2 className="w-3 h-3" />
+                          Success
+                        </>
+                      ) : (
+                        'Reassign Tasks'
+                      )}
                     </button>
                   </div>
                 </div>
