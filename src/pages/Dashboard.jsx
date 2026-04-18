@@ -291,10 +291,10 @@ export default function Dashboard() {
                       <div className="w-16 h-2 bg-slate-200 rounded-full overflow-hidden">
                         <div
                           className="h-full bg-cyan-500"
-                          style={{ width: `${employee.performanceScore}%` }}
+                          style={{ width: `${employee.productivityScore}%` }}
                         />
                       </div>
-                      <span className="text-sm text-slate-600">{employee.performanceScore}%</span>
+                      <span className="text-sm text-slate-600">{employee.productivityScore}%</span>
                     </div>
                   </td>
                   <td className="py-3 px-4">

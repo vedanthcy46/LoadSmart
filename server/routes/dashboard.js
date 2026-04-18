@@ -17,9 +17,12 @@ router.get('/stats', async (req, res) => {
     const inProgressTasks = tasks.filter(t => t.status === 'In Progress').length;
     const pendingTasks = tasks.filter(t => t.status === 'Pending').length;
 
+    // Calculate dynamic productivity for each employee and average them
     const avgProductivity = totalEmployees > 0
       ? Math.round(employees.reduce((sum, e) => {
-          const score = calculateProductivityScore(e.completedTasks, e.totalTasks);
+          const employeeTasks = tasks.filter(t => t.assignedTo === e.userId);
+          const completedCount = employeeTasks.filter(t => t.status === 'Completed').length;
+          const score = calculateProductivityScore(completedCount, employeeTasks.length);
           return sum + score;
         }, 0) / totalEmployees)
       : 0;
@@ -130,21 +133,26 @@ router.get('/task-priority-distribution', async (req, res) => {
 router.get('/leaderboard', async (req, res) => {
   try {
     const employees = await User.find({ role: 'employee' });
+    const tasks = await Task.find();
     
     const leaderboard = employees.map(emp => {
-      // Productivity score calculation: (completed tasks / total tasks) * performanceScore
-      const completionRate = emp.totalTasks > 0 ? (emp.completedTasks / emp.totalTasks) : 0;
+      const employeeTasks = tasks.filter(t => t.assignedTo === emp.userId);
+      const completedCount = employeeTasks.filter(t => t.status === 'Completed').length;
+      
+      // Dynamic Productivity score calculation
+      const completionRate = employeeTasks.length > 0 ? (completedCount / employeeTasks.length) : 0;
+      // Formula: (70% Task Completion Rate + 30% Base Performance)
       const score = Math.round((completionRate * 0.7 + (emp.performanceScore / 100) * 0.3) * 100);
       
       return {
         name: emp.name,
         userId: emp.userId,
         score: score,
-        completedTasks: emp.completedTasks,
+        completedTasks: completedCount,
         performanceScore: emp.performanceScore
       };
     })
-    .sort((a, b) => b.score - a.score); // Return everyone sorted by score
+    .sort((a, b) => b.score - a.score);
 
     res.json(leaderboard);
   } catch (error) {
