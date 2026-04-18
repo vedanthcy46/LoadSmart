@@ -115,7 +115,7 @@ export default function Profile() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between sticky top-16 bg-slate-50/95 backdrop-blur-sm z-30 py-4 border-b border-slate-200/50 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Profile Settings</h1>
           <p className="text-slate-500">Manage your account information</p>

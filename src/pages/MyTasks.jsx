@@ -106,14 +106,14 @@ export default function MyTasks() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 sticky top-16 bg-slate-50/95 backdrop-blur-sm z-30 py-4 border-b border-slate-200/50 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">My Tasks</h1>
           <p className="text-slate-500">Manage and track your assigned work</p>
         </div>
         <button
           onClick={() => setShowStressModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-rose-50 text-rose-600 rounded-lg hover:bg-rose-100 transition-colors"
+          className="flex items-center justify-center gap-2 px-4 py-2 bg-rose-50 text-rose-600 rounded-lg hover:bg-rose-100 transition-colors shadow-sm sm:w-auto w-full"
         >
           <HeartPulse className="w-5 h-5" />
           Check Stress Level
