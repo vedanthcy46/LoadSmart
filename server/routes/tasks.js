@@ -8,6 +8,34 @@ import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
+// Helper to recalculate employee workload and status
+const refreshWorkload = async (userId) => {
+  if (!userId) return;
+  try {
+    const user = await User.findOne({ userId });
+    if (!user) return;
+
+    const activeTasks = await Task.find({ 
+      assignedTo: userId, 
+      status: { $in: ['Pending', 'In Progress', 'Under Review'] } 
+    });
+
+    // Each hour of estimated work adds 2.5% to workload (40 hours = 100%)
+    const totalHours = activeTasks.reduce((sum, t) => sum + (t.estimatedHours || 0), 0);
+    user.workload = Math.min(100, totalHours * 2.5);
+    user.currentLoad = activeTasks.length;
+
+    if (user.workload > 80) user.status = 'overloaded';
+    else if (user.workload > 40) user.status = 'busy';
+    else user.status = 'available';
+
+    await user.save();
+    console.log(`[Workload Sync] Updated ${userId}: ${user.workload}% (${activeTasks.length} tasks)`);
+  } catch (err) {
+    console.error(`[Workload Sync] Failed for ${userId}:`, err);
+  }
+};
+
 router.get('/', authenticateToken, async (req, res) => {
   try {
     const { status, employeeId } = req.query;
@@ -63,6 +91,7 @@ router.post('/', async (req, res) => {
   try {
     const task = new Task(req.body);
     await task.save();
+    if (task.assignedTo) await refreshWorkload(task.assignedTo);
     res.status(201).json(task);
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -340,6 +369,9 @@ router.put('/:id/status', authenticateToken, async (req, res) => {
 
     await task.save();
     
+    // Sync workloads for the involved user
+    await refreshWorkload(task.assignedTo);
+
     const emp = await User.findOne({ userId: task.assignedTo });
     res.json({
       ...task.toObject(),
@@ -352,6 +384,9 @@ router.put('/:id/status', authenticateToken, async (req, res) => {
 
 router.put('/:id', async (req, res) => {
   try {
+    const oldTask = await Task.findById(req.params.id);
+    const oldAssignee = oldTask?.assignedTo;
+
     const task = await Task.findByIdAndUpdate(
       req.params.id,
       req.body,
@@ -361,6 +396,10 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Task not found' });
     }
     
+    // Sync both old and new assignees
+    if (oldAssignee) await refreshWorkload(oldAssignee);
+    if (task.assignedTo && task.assignedTo !== oldAssignee) await refreshWorkload(task.assignedTo);
+
     const emp = await User.findOne({ userId: task.assignedTo });
     res.json({
       ...task.toObject(),
@@ -373,10 +412,14 @@ router.put('/:id', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
   try {
-    const task = await Task.findByIdAndDelete(req.params.id);
+    const task = await Task.findById(req.params.id);
     if (!task) {
       return res.status(404).json({ error: 'Task not found' });
     }
+    const assignee = task.assignedTo;
+    await Task.findByIdAndDelete(req.params.id);
+    
+    if (assignee) await refreshWorkload(assignee);
     res.json({ message: 'Task deleted' });
   } catch (error) {
     res.status(500).json({ error: error.message });
