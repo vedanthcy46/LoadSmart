@@ -180,13 +180,19 @@ export default function TeamOverview() {
   }
 
   const { searchQuery } = useSearch();
+  const query = searchQuery.toLowerCase();
 
-  const filteredEmployees = employees.filter(emp => 
-    emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    emp.userId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (emp.email && emp.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
-    emp.skills?.some(skill => skill.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const filteredEmployees = employees.filter(emp => {
+    const name = emp.name?.toLowerCase() || '';
+    const userId = emp.userId?.toLowerCase() || '';
+    const email = emp.email?.toLowerCase() || '';
+    const skillsMatch = emp.skills?.some(skill => skill?.toLowerCase().includes(query));
+
+    return name.includes(query) || 
+           userId.includes(query) || 
+           email.includes(query) || 
+           skillsMatch;
+  });
 
   return (
     <div className="space-y-6">

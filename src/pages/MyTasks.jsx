@@ -102,12 +102,17 @@ export default function MyTasks() {
   }
 
   const { searchQuery } = useSearch();
+  const query = searchQuery.toLowerCase();
 
-  const filteredTasks = tasks.filter(task => 
-    task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    task.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    task.priority.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredTasks = tasks.filter(task => {
+    const title = task.title?.toLowerCase() || '';
+    const desc = task.description?.toLowerCase() || '';
+    const priority = task.priority?.toLowerCase() || '';
+
+    return title.includes(query) || 
+           desc.includes(query) || 
+           priority.includes(query);
+  });
 
   const pendingTasks = filteredTasks.filter(t => t.status === 'Pending');
   const inProgressTasks = filteredTasks.filter(t => t.status === 'In Progress');

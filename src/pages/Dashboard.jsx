@@ -72,15 +72,18 @@ export default function Dashboard() {
   ] : [];
 
   const { searchQuery } = useSearch();
+  const query = searchQuery.toLowerCase();
 
-  const filteredTeamData = teamData.filter(emp => 
-    emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    emp.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredTeamData = teamData.filter(emp => {
+    const name = emp.name?.toLowerCase() || '';
+    const email = emp.email?.toLowerCase() || '';
+    return name.includes(query) || email.includes(query);
+  });
 
-  const filteredLeaderboard = leaderboard.filter(player => 
-    player.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredLeaderboard = leaderboard.filter(player => {
+    const name = player.name?.toLowerCase() || '';
+    return name.includes(query);
+  });
 
   return (
     <div className="space-y-6">
