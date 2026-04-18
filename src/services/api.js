@@ -8,7 +8,9 @@ export const userAPI = {
   updateStress: (id, data) => api.put(`/users/${id}/stress`, data),
   getStats: (id) => api.get(`/users/${id}/stats`),
   awardBadge: (id, badge) => api.post(`/users/${id}/badge`, { badge }),
-  delete: (id) => api.delete(`/users/${id}`)
+  delete: (id) => api.delete(`/users/${id}`),
+  getWorkloadSuggestion: (id) => api.get(`/users/${id}/workload-suggestion`),
+  getOnboardingCapacity: (skills) => api.post('/users/onboarding-capacity', { skills })
 };
 
 export const employeeAPI = userAPI; // Alias for backward compatibility

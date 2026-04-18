@@ -87,7 +87,7 @@ export default function OverloadedAnalytics() {
               <BarChart data={data}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748b' }} />
-                <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: '#64748b' }} />
+                <YAxis tick={{ fontSize: 11, fill: '#64748b' }} />
                 <Tooltip />
                 <Bar dataKey="workload" radius={[4, 4, 0, 0]}>
                   {data.map((entry, index) => (
@@ -130,7 +130,7 @@ export default function OverloadedAnalytics() {
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex-1">
                       <div className="flex justify-between text-[10px] font-bold text-slate-500 uppercase mb-1">
-                        <span>Current Load: {emp.currentLoad} Tasks</span>
+                        <span>Load: {emp.currentLoadHours || 0}h / {emp.capacity}h capacity ({emp.currentLoad} tasks)</span>
                         <span>Stress: {emp.stressLevel}/5</span>
                       </div>
                       <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">

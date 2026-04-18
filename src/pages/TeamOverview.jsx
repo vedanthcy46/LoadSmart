@@ -21,8 +21,11 @@ export default function TeamOverview() {
     email: '',
     password: '',
     skills: [],
-    capacity: 50
+    capacity: 6
   });
+
+  const [aiCapacity, setAiCapacity] = useState(null);
+  const [loadingCapacity, setLoadingCapacity] = useState(false);
 
   const [editMode, setEditMode] = useState(false);
 
@@ -110,7 +113,8 @@ export default function TeamOverview() {
       }
       setShowAddModal(false);
       setEditMode(false);
-      setNewEmployee({ userId: '', name: '', email: '', password: '', skills: [], capacity: 50 });
+      setAiCapacity(null);
+      setNewEmployee({ userId: '', name: '', email: '', password: '', skills: [], capacity: 6 });
       fetchEmployees();
     } catch (error) {
       console.error('Failed to save employee:', error);
@@ -130,12 +134,34 @@ export default function TeamOverview() {
   };
 
   const toggleSkill = (skill) => {
-    setNewEmployee(prev => ({
-      ...prev,
-      skills: prev.skills.includes(skill)
+    setNewEmployee(prev => {
+      const updatedSkills = prev.skills.includes(skill)
         ? prev.skills.filter(s => s !== skill)
-        : [...prev.skills, skill]
-    }));
+        : [...prev.skills, skill];
+      
+      // 🤖 Auto-trigger AI capacity suggestion when skills change (only for new employees)
+      if (!editMode && updatedSkills.length > 0) {
+        fetchAICapacity(updatedSkills);
+      } else if (updatedSkills.length === 0) {
+        setAiCapacity(null);
+      }
+
+      return { ...prev, skills: updatedSkills };
+    });
+  };
+
+  const fetchAICapacity = async (skills) => {
+    setLoadingCapacity(true);
+    try {
+      const { data } = await userAPI.getOnboardingCapacity(skills);
+      setAiCapacity(data);
+      // Auto-apply AI recommendation
+      setNewEmployee(prev => ({ ...prev, capacity: data.recommendedCapacity }));
+    } catch (error) {
+      console.error('Failed to get AI capacity:', error);
+    } finally {
+      setLoadingCapacity(false);
+    }
   };
 
   const handleAddSkill = async () => {
@@ -205,7 +231,8 @@ export default function TeamOverview() {
           onClick={() => {
             setEditMode(false);
             setSelectedEmployee(null);
-            setNewEmployee({ userId: '', name: '', email: '', password: '', skills: [], capacity: 50 });
+            setNewEmployee({ userId: '', name: '', email: '', password: '', skills: [], capacity: 6 });
+            setAiCapacity(null);
             setShowAddModal(true);
           }}
           className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-lg hover:from-cyan-600 hover:to-blue-700 transition-all shadow-md sm:w-auto w-full"
@@ -334,21 +361,64 @@ export default function TeamOverview() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Work Capacity: {newEmployee.capacity} tasks
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Work Capacity (Hours)
                 </label>
-                <input
-                  type="range"
-                  min="1"
-                  max="100"
-                  value={newEmployee.capacity}
-                  onChange={(e) => setNewEmployee(prev => ({ ...prev, capacity: parseInt(e.target.value) }))}
-                  className="w-full"
-                />
-                <div className="flex justify-between text-xs text-slate-500 mt-1">
-                  <span>Low (1)</span>
-                  <span>High (100)</span>
-                </div>
+                {!editMode ? (
+                  <div className="space-y-2">
+                    <div className={`p-3 rounded-lg border ${
+                      aiCapacity 
+                        ? 'bg-gradient-to-r from-cyan-50 to-blue-50 border-cyan-200' 
+                        : 'bg-slate-50 border-slate-200'
+                    }`}>
+                      {loadingCapacity ? (
+                        <div className="flex items-center gap-2 text-sm text-cyan-600">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          AI is calculating optimal capacity...
+                        </div>
+                      ) : aiCapacity ? (
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <Brain className="w-4 h-4 text-cyan-600" />
+                            <span className="text-sm font-bold text-cyan-700">AI Recommended: {aiCapacity.recommendedCapacity}h</span>
+                          </div>
+                          <p className="text-xs text-slate-500 italic">{aiCapacity.reason}</p>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-slate-500">
+                          Select skills to get AI capacity recommendation. Default: <span className="font-bold">6 hours</span>
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-500 font-medium">Current:</span>
+                      <span className="text-sm font-bold text-slate-800">{newEmployee.capacity} hours</span>
+                      {aiCapacity && newEmployee.capacity !== aiCapacity.recommendedCapacity && (
+                        <button
+                          type="button"
+                          onClick={() => setNewEmployee(prev => ({ ...prev, capacity: aiCapacity.recommendedCapacity }))}
+                          className="text-xs px-2 py-0.5 bg-cyan-100 text-cyan-700 rounded hover:bg-cyan-200 transition-colors font-medium"
+                        >
+                          Apply AI Suggestion
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="number"
+                        min="2"
+                        max="20"
+                        value={newEmployee.capacity}
+                        onChange={(e) => setNewEmployee(prev => ({ ...prev, capacity: Math.min(20, Math.max(2, parseInt(e.target.value) || 6)) }))}
+                        className="w-24 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-center font-bold"
+                      />
+                      <span className="text-sm text-slate-500">hours (min: 2, max: 20)</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <button
@@ -378,7 +448,7 @@ export default function TeamOverview() {
                         email: selectedEmployee.email || '',
                         password: '',
                         skills: selectedEmployee.skills || [],
-                        capacity: selectedEmployee.capacity || 50
+                        capacity: selectedEmployee.capacity || 6
                       });
                       setShowAddModal(true);
                       setSelectedEmployee(null); // Close details modal to prevent stacking
@@ -445,7 +515,7 @@ export default function TeamOverview() {
 
               <div>
                 <p className="text-sm text-slate-500">Work Capacity</p>
-                <p className="font-medium text-slate-800">{selectedEmployee.capacity} tasks</p>
+                <p className="font-medium text-slate-800">{selectedEmployee.capacity} hours</p>
               </div>
 
               <div>

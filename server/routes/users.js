@@ -63,6 +63,40 @@ router.get('/:id', authenticateToken, async (req, res) => {
   }
 });
 
+// AI Onboarding Capacity - determine optimal starting capacity
+router.post('/onboarding-capacity', authenticateToken, async (req, res) => {
+  try {
+    const { skills } = req.body;
+    if (!skills || skills.length === 0) {
+      return res.json({ recommendedCapacity: 6, reason: 'Default capacity for new employees.' });
+    }
+
+    const { generateWorkloadSuggestion } = await import('../utils/ai.js');
+    
+    // Use AI to suggest capacity for a new employee based on skills
+    const suggestion = await generateWorkloadSuggestion({
+      productivityScore: 50, // New employee, neutral
+      workload: 0,           // No tasks yet
+      stressLevel: 1,        // Fresh start
+      completedTasks: 0,
+      pendingTasks: 0,
+      skills: skills,
+      isNewEmployee: true
+    });
+
+    // Clamp between 2 and 20
+    const capacity = Math.min(20, Math.max(2, suggestion.recommendedCapacity || 6));
+    
+    res.json({
+      recommendedCapacity: capacity,
+      reason: suggestion.reason || `Recommended based on ${skills.length} skill(s): ${skills.join(', ')}`
+    });
+  } catch (error) {
+    console.error('Onboarding capacity error:', error);
+    res.json({ recommendedCapacity: 6, reason: 'Default capacity (AI unavailable).' });
+  }
+});
+
 // Create new user (Admin only)
 router.post('/', authenticateToken, async (req, res) => {
   console.log('[User Create Debug] Incoming POST request from:', req.user.id);

@@ -265,7 +265,30 @@ Return ONLY structured JSON in this format:
 };
 
 export const generateWorkloadSuggestion = async (metrics) => {
-  const prompt = `You are a workforce optimization AI.
+  const isNew = metrics.isNewEmployee;
+  
+  const prompt = isNew 
+    ? `You are a workforce optimization AI for employee onboarding.
+
+A new employee is being hired with these skills: ${(metrics.skills || []).join(', ')}
+
+Based on the number and complexity of their skills, recommend a starting work capacity in hours per day.
+
+Rules:
+- Minimum capacity: 2 hours
+- Maximum capacity: 20 hours  
+- New employees with 1-2 skills: recommend 4-6 hours
+- New employees with 3-5 skills: recommend 6-8 hours
+- New employees with 6+ skills: recommend 8-10 hours
+- Never overload a new employee
+
+Return ONLY structured JSON:
+{
+  "suggestion": "maintain",
+  "recommendedCapacity": number,
+  "reason": "short reason"
+}`
+    : `You are a workforce optimization AI.
 
 Employee Data:
 * Productivity Score: ${metrics.productivityScore}
@@ -276,10 +299,10 @@ Employee Data:
 
 Decide:
 1. Should workload increase, decrease, or stay same?
-2. Suggest new capacity (in hours)
+2. Suggest new capacity (in hours, between 2 and 20)
 3. Give short reason
 
-Return ONLY structured JSON in this format:
+Return ONLY structured JSON:
 {
   "suggestion": "increase_load" | "decrease_load" | "maintain",
   "recommendedCapacity": number,
@@ -297,11 +320,14 @@ Return ONLY structured JSON in this format:
     const aiResponse = response.choices[0].message.content.trim();
     const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
+      const parsed = JSON.parse(jsonMatch[0]);
+      // Clamp capacity between 2 and 20
+      parsed.recommendedCapacity = Math.min(20, Math.max(2, parsed.recommendedCapacity || 6));
+      return parsed;
     }
-    return { suggestion: "maintain", recommendedCapacity: 8, reason: "Unable to parse AI suggestion." };
+    return { suggestion: "maintain", recommendedCapacity: 6, reason: "Unable to parse AI suggestion." };
   } catch (error) {
     console.error('Groq API Error in workload suggestion:', error.message);
-    return { suggestion: "maintain", recommendedCapacity: 8, reason: "AI service unavailable." };
+    return { suggestion: "maintain", recommendedCapacity: 6, reason: "AI service unavailable." };
   }
 };
