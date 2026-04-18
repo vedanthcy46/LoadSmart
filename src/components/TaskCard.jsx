@@ -1,4 +1,4 @@
-import { Clock, CheckCircle2, Circle, User, PlayCircle } from 'lucide-react';
+import { Clock, CheckCircle2, Circle, User, PlayCircle, AlertCircle, XCircle, MessageSquare, Send } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function TaskCard({ task, onStatusChange }) {
@@ -12,8 +12,9 @@ export default function TaskCard({ task, onStatusChange }) {
   const statusIcons = {
     Pending: Circle,
     'In Progress': PlayCircle,
-    'Under Review': Clock,
-    Completed: CheckCircle2
+    'In Review': Clock,
+    Completed: CheckCircle2,
+    Rejected: AlertCircle
   };
 
   const isAssignedToMe = typeof task.assignedTo === 'object' 
@@ -25,14 +26,22 @@ export default function TaskCard({ task, onStatusChange }) {
   const statusColors = {
     Pending: 'text-slate-400',
     'In Progress': 'text-blue-500',
-    'Under Review': 'text-amber-500',
-    Completed: 'text-emerald-500'
+    'In Review': 'text-amber-500',
+    Completed: 'text-emerald-500',
+    Rejected: 'text-rose-500'
   };
 
   const StatusIcon = statusIcons[task.status] || Circle;
 
+  const handleReject = () => {
+    const feedback = window.prompt("Enter rejection feedback:");
+    if (feedback !== null) {
+      onStatusChange(task._id, 'Rejected', feedback);
+    }
+  };
+
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 hover:shadow-md transition-shadow">
+    <div className={`bg-white rounded-xl shadow-sm border p-5 hover:shadow-md transition-shadow ${task.status === 'Rejected' ? 'border-rose-200 bg-rose-50/10' : 'border-slate-200'}`}>
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
@@ -54,8 +63,20 @@ export default function TaskCard({ task, onStatusChange }) {
               OFFLOADED
             </span>
           )}
+          <span className={`text-[10px] font-bold uppercase ${statusColors[task.status] || ''}`}>
+            {task.status}
+          </span>
         </div>
       </div>
+
+      {task.status === 'Rejected' && task.feedback && (
+        <div className="mb-4 p-3 bg-rose-50 border border-rose-100 rounded-lg">
+          <p className="text-xs font-bold text-rose-700 uppercase mb-1 flex items-center gap-1">
+            <MessageSquare className="w-3 h-3" /> Admin Feedback
+          </p>
+          <p className="text-sm text-rose-600 italic">"{task.feedback}"</p>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500 mb-3">
         <div className="flex flex-wrap items-center gap-1">
@@ -92,36 +113,48 @@ export default function TaskCard({ task, onStatusChange }) {
 
       {task.status !== 'Completed' && onStatusChange && (
         <div className="flex gap-2 pt-2 border-t border-slate-100">
-          {user?.role === 'employee' && task.status === 'Pending' && isAssignedToMe && (
-            <button
-              onClick={() => onStatusChange(task._id, 'In Progress')}
-              className="flex-1 px-3 py-1.5 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition-colors font-medium flex items-center justify-center gap-2"
-            >
-              <PlayCircle className="w-4 h-4" />
-              Start Task
-            </button>
+          {user?.role === 'employee' && isAssignedToMe && (
+            <>
+              {task.status === 'Pending' && (
+                <button
+                  onClick={() => onStatusChange(task._id, 'In Progress')}
+                  className="flex-1 px-3 py-1.5 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition-colors font-medium flex items-center justify-center gap-2"
+                >
+                  <PlayCircle className="w-4 h-4" /> Start Task
+                </button>
+              )}
+              {(task.status === 'In Progress' || task.status === 'Rejected') && (
+                <button
+                  onClick={() => onStatusChange(task._id, 'In Review')}
+                  className="flex-1 px-3 py-1.5 bg-amber-500 text-white text-sm rounded-lg hover:bg-amber-600 transition-colors font-medium flex items-center justify-center gap-2"
+                >
+                  <Send className="w-4 h-4" /> 
+                  {task.status === 'Rejected' ? 'Re-submit Work' : 'Mark as Completed'}
+                </button>
+              )}
+            </>
           )}
-          {user?.role === 'employee' && task.status === 'In Progress' && isAssignedToMe && (
-            <button
-              onClick={() => onStatusChange(task._id, 'Under Review')}
-              className="flex-1 px-3 py-1.5 bg-amber-500 text-white text-sm rounded-lg hover:bg-amber-600 transition-colors font-medium flex items-center justify-center gap-2"
-            >
-              <Clock className="w-4 h-4" />
-              Submit for Review
-            </button>
+
+          {user?.role === 'admin' && task.status === 'In Review' && (
+            <div className="flex flex-1 gap-2">
+              <button
+                onClick={() => onStatusChange(task._id, 'Completed')}
+                className="flex-1 px-3 py-1.5 bg-emerald-500 text-white text-sm rounded-lg hover:bg-emerald-600 transition-colors font-medium flex items-center justify-center gap-2"
+              >
+                <CheckCircle2 className="w-4 h-4" /> Approve
+              </button>
+              <button
+                onClick={handleReject}
+                className="flex-1 px-3 py-1.5 bg-rose-500 text-white text-sm rounded-lg hover:bg-rose-600 transition-colors font-medium flex items-center justify-center gap-2"
+              >
+                <XCircle className="w-4 h-4" /> Reject
+              </button>
+            </div>
           )}
-          {user?.role === 'admin' && task.status === 'Under Review' && (
-            <button
-              onClick={() => onStatusChange(task._id, 'Completed')}
-              className="flex-1 px-3 py-1.5 bg-emerald-500 text-white text-sm rounded-lg hover:bg-emerald-600 transition-colors font-medium flex items-center justify-center gap-2"
-            >
-              <CheckCircle2 className="w-4 h-4" />
-              Verify & Approve
-            </button>
-          )}
-          {user?.role === 'admin' && task.status === 'In Progress' && (
+
+          {(user?.role === 'admin' && (task.status === 'In Progress' || task.status === 'Rejected' || task.status === 'Pending')) && (
             <div className="flex-1 text-center py-1.5 text-xs text-slate-400 italic">
-              Employee working...
+              {task.status === 'Pending' ? 'Waiting for start...' : task.status === 'Rejected' ? 'Awaiting revision...' : 'Employee working...'}
             </div>
           )}
         </div>

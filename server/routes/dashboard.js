@@ -69,7 +69,7 @@ router.get('/team-overview', async (req, res) => {
       
       // ✅ CORRECT: Use the stored workload (set by refreshWorkload formula)
       const activeTasks = employeeTasks.filter(t => 
-        t.status === 'Pending' || t.status === 'In Progress' || t.status === 'Under Review'
+        ['Pending', 'In Progress', 'In Review', 'Rejected'].includes(t.status)
       );
       const totalHours = activeTasks.reduce((sum, t) => sum + (t.estimatedHours || 0), 0);
       const capacity = employee.capacity || 6;
@@ -108,7 +108,7 @@ router.get('/team-overview', async (req, res) => {
 router.get('/workload-distribution', async (req, res) => {
   try {
     const employees = await User.find({ role: 'employee' });
-    const tasks = await Task.find({ status: { $in: ['Pending', 'In Progress', 'Under Review'] } });
+    const tasks = await Task.find({ status: { $in: ['Pending', 'In Progress', 'In Review', 'Rejected'] } });
 
     let low = 0, balanced = 0, overloaded = 0;
 

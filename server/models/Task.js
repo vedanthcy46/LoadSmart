@@ -13,14 +13,16 @@ const taskSchema = new mongoose.Schema({
   assignedTo: { type: String }, // Storing employeeId directly as per prompt: "assignedTo (employeeId)"
   status: {
     type: String,
-    enum: ['Pending', 'In Progress', 'Under Review', 'Completed'],
+    enum: ['Pending', 'In Progress', 'In Review', 'Completed', 'Rejected'],
     default: 'Pending'
   },
+  feedback: { type: String, default: '' },
   aiExplanation: { type: String },
   deadline: { type: Date },
-  completionTime: { type: Date }, // Prompt uses completionTime
-  previousAssignee: { type: String }, // Track who the task was taken from
-  createdAt: { type: Date, default: Date.now }
+  completionTime: { type: Date },
+  previousAssignee: { type: String },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
 });
 
 export default mongoose.model('Task', taskSchema);

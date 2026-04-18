@@ -31,7 +31,7 @@ const getDateFilter = (filter) => {
 const calcWorkload = (userId, tasks, capacity) => {
   const activeTasks = tasks.filter(t => 
     t.assignedTo === userId && 
-    (t.status === 'Pending' || t.status === 'In Progress' || t.status === 'Under Review')
+    ['Pending', 'In Progress', 'In Review', 'Rejected'].includes(t.status)
   );
   const totalHours = activeTasks.reduce((sum, t) => sum + (t.estimatedHours || 0), 0);
   const cap = capacity || 6;
@@ -94,6 +94,8 @@ router.get('/employees', authenticateToken, async (req, res) => {
           taskBreakdown: {
             pending: empTasks.filter(t => t.status === 'Pending').length,
             inProgress: empTasks.filter(t => t.status === 'In Progress').length,
+            inReview: empTasks.filter(t => t.status === 'In Review').length,
+            rejected: empTasks.filter(t => t.status === 'Rejected').length,
             completed: empTasks.filter(t => t.status === 'Completed').length
           }
         };
@@ -121,6 +123,8 @@ router.get('/tasks', authenticateToken, async (req, res) => {
     const statusBreakdown = {
       pending: tasks.filter(t => t.status === 'Pending').length,
       inProgress: tasks.filter(t => t.status === 'In Progress').length,
+      inReview: tasks.filter(t => t.status === 'In Review').length,
+      rejected: tasks.filter(t => t.status === 'Rejected').length,
       completed: tasks.filter(t => t.status === 'Completed').length
     };
 
@@ -208,7 +212,7 @@ router.get('/overloaded', authenticateToken, async (req, res) => {
     }
 
     const employees = await User.find({ role: 'employee' });
-    const tasks = await Task.find({ status: { $in: ['Pending', 'In Progress', 'Under Review'] } });
+    const tasks = await Task.find({ status: { $in: ['Pending', 'In Progress', 'In Review', 'Rejected'] } });
 
     const overloadedEmployees = employees.map(emp => {
       const empTasks = tasks.filter(t => t.assignedTo === emp.userId);

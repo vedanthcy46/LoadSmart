@@ -124,9 +124,9 @@ export default function TaskAllocation() {
     }
   };
 
-  const handleStatusChange = async (taskId, status) => {
+  const handleStatusChange = async (taskId, status, feedback) => {
     try {
-      await taskAPI.updateStatus(taskId, status);
+      await taskAPI.updateStatus(taskId, status, feedback);
       fetchData();
     } catch (error) {
       console.error('Failed to update task status:', error);
@@ -140,7 +140,7 @@ export default function TaskAllocation() {
     const title = task.title?.toLowerCase() || '';
     const desc = task.description?.toLowerCase() || '';
     const priority = task.priority?.toLowerCase() || '';
-    const assignedTo = typeof task.assignedTo === 'string' ? task.assignedTo.toLowerCase() : '';
+    const assignedTo = typeof task.assignedTo === 'object' ? task.assignedTo.name?.toLowerCase() : (task.assignedTo?.toLowerCase() || '');
 
     return title.includes(query) || 
            desc.includes(query) || 
@@ -149,7 +149,8 @@ export default function TaskAllocation() {
   });
 
   const pendingTasks = filteredTasks.filter(t => t.status === 'Pending');
-  const inProgressTasks = filteredTasks.filter(t => t.status === 'In Progress');
+  const reviewTasks = filteredTasks.filter(t => t.status === 'In Review');
+  const activeTasks = filteredTasks.filter(t => t.status === 'In Progress' || t.status === 'Rejected');
   const completedTasks = filteredTasks.filter(t => t.status === 'Completed');
 
   return (
@@ -161,6 +162,7 @@ export default function TaskAllocation() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1">
+          {/* Form remains same */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sticky top-24">
             <div className="flex items-center gap-2 mb-6">
               <div className="w-8 h-8 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg flex items-center justify-center">
@@ -340,9 +342,24 @@ export default function TaskAllocation() {
           </div>
         </div>
 
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-8">
+          {reviewTasks.length > 0 && (
+            <div className="bg-amber-50/50 p-6 rounded-2xl border border-amber-100">
+              <h2 className="font-bold text-amber-800 mb-4 flex items-center gap-2">
+                <Sparkles className="w-5 h-5" /> Awaiting Review ({reviewTasks.length})
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {reviewTasks.map(task => (
+                  <TaskCard key={task._id} task={task} onStatusChange={handleStatusChange} />
+                ))}
+              </div>
+            </div>
+          )}
+
           <div>
-            <h2 className="font-semibold text-slate-800 mb-4">Pending Tasks ({pendingTasks.length})</h2>
+            <h2 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
+              Pending Tasks ({pendingTasks.length})
+            </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {pendingTasks.slice(0, 6).map(task => (
                 <TaskCard key={task._id} task={task} onStatusChange={handleStatusChange} />
@@ -351,16 +368,20 @@ export default function TaskAllocation() {
           </div>
 
           <div>
-            <h2 className="font-semibold text-blue-600 mb-4">In Progress ({inProgressTasks.length})</h2>
+            <h2 className="font-semibold text-blue-600 mb-4 flex items-center gap-2">
+              Active / Revision Needed ({activeTasks.length})
+            </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {inProgressTasks.slice(0, 6).map(task => (
+              {activeTasks.slice(0, 6).map(task => (
                 <TaskCard key={task._id} task={task} onStatusChange={handleStatusChange} />
               ))}
             </div>
           </div>
 
           <div>
-            <h2 className="font-semibold text-slate-800 mb-4">Completed ({completedTasks.length})</h2>
+            <h2 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
+              Completed ({completedTasks.length})
+            </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {completedTasks.slice(0, 4).map(task => (
                 <TaskCard key={task._id} task={task} />

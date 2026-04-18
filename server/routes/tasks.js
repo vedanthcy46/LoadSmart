@@ -197,10 +197,10 @@ router.post('/reassign-overloaded/:userId', authenticateToken, async (req, res) 
     const overloadedEmp = await User.findOne({ userId });
     if (!overloadedEmp) return res.status(404).json({ error: 'Employee not found' });
 
-    // 2. Find their active tasks
+    // 2. Find their active tasks (Pending, In Progress, or Rejected)
     const tasks = await Task.find({ 
       assignedTo: userId, 
-      status: { $in: ['Pending', 'In Progress'] } 
+      status: { $in: ['Pending', 'In Progress', 'Rejected'] } 
     });
 
     if (tasks.length === 0) {
@@ -289,61 +289,85 @@ router.post('/suggest', async (req, res) => {
 // ===== UPDATE TASK STATUS =====
 router.put('/:id/status', authenticateToken, async (req, res) => {
   try {
-    const { status } = req.body;
+    const { status, feedback } = req.body;
     
-    if (req.user.role === 'employee' && status === 'Completed') {
-      return res.status(403).json({ error: 'Employees cannot mark tasks as Completed. Please submit for "Under Review" instead.' });
-    }
-
-    // MUST fetch the task FIRST before referencing it
+    // Fetch the task FIRST
     const task = await Task.findById(req.params.id);
     if (!task) {
       return res.status(404).json({ error: 'Task not found' });
     }
 
-    if (status === 'Under Review' && req.user.role === 'employee') {
+    const previousStatus = task.status;
+    const isAdmin = req.user.role === 'admin';
+
+    // 🛡️ ROLE-BASED VALIDATION
+    if (!isAdmin) {
+      // Employee actions
+      if (status === 'Completed') {
+        return res.status(403).json({ error: 'Employees cannot directly mark tasks as Completed. Submit for "In Review" instead.' });
+      }
+      if (status === 'Rejected') {
+        return res.status(403).json({ error: 'Employees cannot reject tasks.' });
+      }
+    } else {
+      // Admin actions
+      if (status === 'In Progress' && previousStatus !== 'Rejected') {
+         // Admins usually don't move tasks to in_progress unless they are the ones doing it, but here it's employee-driven
+      }
+    }
+
+    // 🔄 STATUS FLOW LOGIC
+    task.status = status;
+    if (feedback) task.feedback = feedback;
+    task.updatedAt = new Date();
+
+    // 🔔 NOTIFICATIONS & SPECIAL LOGIC
+    if (status === 'In Review') {
       await createNotification(
-        'admin',
-        `Employee ${req.user.username || req.user.id} submitted "${task.title}" for review.`,
+        'admin', // Target all admins
+        `Task "${task.title}" is ready for review.`,
         'task_review',
         task._id
       );
-    }
-
-    const previousStatus = task.status;
-    task.status = status;
-
-    // 🔄 AUTO CAPACITY ADJUSTMENT on task completion
-    if (status === 'Completed' && previousStatus !== 'Completed') {
+    } else if (status === 'Rejected') {
+      await createNotification(
+        task.assignedTo,
+        `Task "${task.title}" needs revision. Feedback: ${feedback}`,
+        'task_rejected',
+        task._id
+      );
+    } else if (status === 'Completed' && previousStatus !== 'Completed') {
       task.completionTime = new Date();
       const employee = await User.findOne({ userId: task.assignedTo });
       if (employee) {
         employee.completedTasks += 1;
 
-        // Recalculate productivity for capacity adjustment decision
+        // Recalculate productivity
         const allTasks = await Task.find({ assignedTo: employee.userId });
-        const completedCount = allTasks.filter(t => t.status === 'Completed').length + 1; // +1 for this task
-        const prodScore = allTasks.length > 0 ? Math.round((completedCount / allTasks.length) * 100) : 0;
-        employee.productivityScore = prodScore;
+        const completedCount = allTasks.filter(t => t.status === 'Completed').length + 1;
+        employee.productivityScore = allTasks.length > 0 ? Math.round((completedCount / allTasks.length) * 100) : 0;
         
-        // Case 1: High Performer (productivity > 80%, stress < 3, workload < 70%)
-        if (prodScore > 80 && employee.stressLevel < 3 && employee.workload < 70) {
+        // Auto capacity adjustment (existing logic)
+        if (employee.productivityScore > 80 && employee.stressLevel < 3 && employee.workload < 70) {
           employee.capacity = Math.min(20, (employee.capacity || 6) + 1);
-          console.log(`[Capacity] Increased for ${employee.userId} → ${employee.capacity}h (High Performance)`);
-        } 
-        // Case 2: Overloaded/Stressed (workload > 85%, stress > 3)
-        else if (employee.workload > 85 && employee.stressLevel > 3) {
+        } else if (employee.workload > 85 && employee.stressLevel > 3) {
           employee.capacity = Math.max(2, (employee.capacity || 6) - 1);
-          console.log(`[Capacity] Reduced for ${employee.userId} → ${employee.capacity}h (Overloaded/Stressed)`);
         }
 
         await employee.save();
       }
+
+      await createNotification(
+        task.assignedTo,
+        `Task "${task.title}" has been approved and completed!`,
+        'task_completed',
+        task._id
+      );
     }
 
     await task.save();
     
-    // ✅ Always recalculate using the correct formula after any status change
+    // Sync workload (especially important when task is completed)
     await refreshWorkload(task.assignedTo);
 
     const emp = await User.findOne({ userId: task.assignedTo });

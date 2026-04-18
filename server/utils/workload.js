@@ -10,7 +10,7 @@ export const refreshWorkload = async (userId) => {
 
     const activeTasks = await Task.find({ 
       assignedTo: userId, 
-      status: { $in: ['Pending', 'In Progress', 'Under Review'] } 
+      status: { $in: ['Pending', 'In Progress', 'In Review', 'Rejected'] } 
     });
 
     // Correct Formula: workload = (totalAssignedTaskHours / capacity) * 100

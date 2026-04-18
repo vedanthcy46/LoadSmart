@@ -132,7 +132,7 @@ export default function MyTasks() {
   });
 
   const pendingTasks = filteredTasks.filter(t => t.status === 'Pending');
-  const inProgressTasks = filteredTasks.filter(t => t.status === 'In Progress');
+  const activeTasks = filteredTasks.filter(t => t.status === 'In Progress' || t.status === 'Rejected' || t.status === 'In Review');
   const completedTasks = filteredTasks.filter(t => t.status === 'Completed');
 
   return (
@@ -294,18 +294,18 @@ export default function MyTasks() {
 
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-slate-800">In Progress</h2>
+            <h2 className="font-semibold text-slate-800">Active Work</h2>
             <span className="px-2.5 py-1 bg-blue-50 text-blue-600 rounded-lg text-sm font-medium">
-              {inProgressTasks.length}
+              {activeTasks.length}
             </span>
           </div>
           <div className="space-y-4">
-            {inProgressTasks.map(task => (
-              <TaskCard key={task._id} task={task} />
+            {activeTasks.map(task => (
+              <TaskCard key={task._id} task={task} onStatusChange={handleStatusChange} />
             ))}
-            {inProgressTasks.length === 0 && (
+            {activeTasks.length === 0 && (
               <div className="text-center py-8 bg-slate-50 rounded-xl border border-slate-200 border-dashed">
-                <p className="text-slate-500">No tasks in progress</p>
+                <p className="text-slate-500">No tasks in progress or review</p>
               </div>
             )}
           </div>
@@ -320,7 +320,7 @@ export default function MyTasks() {
           </div>
           <div className="space-y-4">
             {completedTasks.map(task => (
-              <TaskCard key={task._id} task={task} />
+              <TaskCard key={task._id} task={task} onStatusChange={handleStatusChange} />
             ))}
             {completedTasks.length === 0 && (
               <div className="text-center py-8 bg-slate-50 rounded-xl border border-slate-200 border-dashed">
