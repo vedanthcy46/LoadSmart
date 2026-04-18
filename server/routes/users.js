@@ -116,8 +116,17 @@ router.put('/:id', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
+    // Check if new email already exists (excluding this user)
+    if (email && email !== user.email) {
+      const existingEmail = await User.findOne({ email, userId: { $ne: user.userId } });
+      if (existingEmail) {
+        console.log(`[User Update Debug] Email already exists: ${email}`);
+        return res.status(400).json({ error: 'Email already exists' });
+      }
+      user.email = email;
+    }
+
     if (name) user.name = name;
-    if (email) user.email = email;
     if (password) user.password = password; 
     if (skills) user.skills = skills;
     if (capacity) user.capacity = Number(capacity);
