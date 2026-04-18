@@ -180,10 +180,10 @@ export default function TeamOverview() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sticky top-16 bg-slate-50/95 backdrop-blur-sm z-30 py-4 -mx-4 px-4 sm:-mx-6 sm:px-6 -mt-6 mb-2 border-b border-slate-200/50">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Team Overview</h1>
-          <p className="text-slate-500">Monitor team workload and performance</p>
+          <p className="text-slate-500 text-sm sm:text-base">Monitor team workload and performance</p>
         </div>
         <button
           onClick={() => {
@@ -192,7 +192,7 @@ export default function TeamOverview() {
             setNewEmployee({ userId: '', name: '', email: '', password: '', skills: [], capacity: 50 });
             setShowAddModal(true);
           }}
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-lg hover:from-cyan-600 hover:to-blue-700 transition-all"
+          className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-lg hover:from-cyan-600 hover:to-blue-700 transition-all shadow-md sm:w-auto w-full"
         >
           <Plus className="w-4 h-4" />
           Add Employee
