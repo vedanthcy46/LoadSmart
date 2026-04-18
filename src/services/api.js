@@ -35,6 +35,7 @@ export const dashboardAPI = {
 export const feedbackAPI = {
   submit: (data) => api.post('/feedback', data),
   getAll: () => api.get('/feedback'),
+  getMyTips: () => api.get('/feedback/my-tips'),
 };
 
 export const notificationAPI = {
