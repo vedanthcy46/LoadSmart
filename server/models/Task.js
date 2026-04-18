@@ -13,7 +13,7 @@ const taskSchema = new mongoose.Schema({
   assignedTo: { type: String }, // Storing employeeId directly as per prompt: "assignedTo (employeeId)"
   status: {
     type: String,
-    enum: ['Pending', 'In Progress', 'Completed'],
+    enum: ['Pending', 'In Progress', 'Under Review', 'Completed'],
     default: 'Pending'
   },
   aiExplanation: { type: String },

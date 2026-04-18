@@ -301,7 +301,17 @@ router.put('/:id/status', authenticateToken, async (req, res) => {
     const { status } = req.body; // e.g. "Completed", "In Progress"
     
     if (req.user.role === 'employee' && status === 'Completed') {
-      return res.status(403).json({ error: 'Employees cannot mark tasks as Completed. Please wait for Admin approval.' });
+      return res.status(403).json({ error: 'Employees cannot mark tasks as Completed. Please submit for "Under Review" instead.' });
+    }
+
+    if (status === 'Under Review' && req.user.role === 'employee') {
+      // Notify Admin that a task is ready for review
+      await createNotification(
+        'admin', // Assuming 'admin' is the generic identifier or logic handles it
+        `Employee ${req.user.username} submitted "${task.title}" for review.`,
+        'task_review',
+        task._id
+      );
     }
 
     const task = await Task.findById(req.params.id);

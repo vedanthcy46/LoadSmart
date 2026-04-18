@@ -12,6 +12,7 @@ export default function TaskCard({ task, onStatusChange }) {
   const statusIcons = {
     Pending: Circle,
     'In Progress': PlayCircle,
+    'Under Review': Clock,
     Completed: CheckCircle2
   };
 
@@ -24,6 +25,7 @@ export default function TaskCard({ task, onStatusChange }) {
   const statusColors = {
     Pending: 'text-slate-400',
     'In Progress': 'text-blue-500',
+    'Under Review': 'text-amber-500',
     Completed: 'text-emerald-500'
   };
 
@@ -88,9 +90,9 @@ export default function TaskCard({ task, onStatusChange }) {
         </div>
       )}
 
-      {task.status !== 'Completed' && onStatusChange && isAssignedToMe && (
+      {task.status !== 'Completed' && onStatusChange && (
         <div className="flex gap-2 pt-2 border-t border-slate-100">
-          {user?.role === 'employee' && task.status === 'Pending' && (
+          {user?.role === 'employee' && task.status === 'Pending' && isAssignedToMe && (
             <button
               onClick={() => onStatusChange(task._id, 'In Progress')}
               className="flex-1 px-3 py-1.5 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition-colors font-medium flex items-center justify-center gap-2"
@@ -99,14 +101,28 @@ export default function TaskCard({ task, onStatusChange }) {
               Start Task
             </button>
           )}
-          {user?.role === 'admin' && task.status === 'In Progress' && (
+          {user?.role === 'employee' && task.status === 'In Progress' && isAssignedToMe && (
+            <button
+              onClick={() => onStatusChange(task._id, 'Under Review')}
+              className="flex-1 px-3 py-1.5 bg-amber-500 text-white text-sm rounded-lg hover:bg-amber-600 transition-colors font-medium flex items-center justify-center gap-2"
+            >
+              <Clock className="w-4 h-4" />
+              Submit for Review
+            </button>
+          )}
+          {user?.role === 'admin' && task.status === 'Under Review' && (
             <button
               onClick={() => onStatusChange(task._id, 'Completed')}
               className="flex-1 px-3 py-1.5 bg-emerald-500 text-white text-sm rounded-lg hover:bg-emerald-600 transition-colors font-medium flex items-center justify-center gap-2"
             >
               <CheckCircle2 className="w-4 h-4" />
-              Verify & Complete
+              Verify & Approve
             </button>
+          )}
+          {user?.role === 'admin' && task.status === 'In Progress' && (
+            <div className="flex-1 text-center py-1.5 text-xs text-slate-400 italic">
+              Employee working...
+            </div>
           )}
         </div>
       )}
