@@ -53,8 +53,7 @@ router.get('/employees', authenticateToken, async (req, res) => {
     // Capacity vs Workload
     const workloadData = allEmployees.map(emp => {
       const empTasks = tasks.filter(t => t.assignedTo === emp.userId);
-      const activeTasks = empTasks.filter(t => t.status === 'Pending' || t.status === 'In Progress');
-      const currentLoad = activeTasks.length;
+      const currentWorkload = Math.round(emp.workload || 0);
       
       const breakdown = {
         pending: empTasks.filter(t => t.status === 'Pending').length,
@@ -65,7 +64,7 @@ router.get('/employees', authenticateToken, async (req, res) => {
       return {
         name: emp.name,
         capacity: emp.capacity || 50,
-        workload: Math.round((currentLoad / (emp.capacity || 50)) * 100),
+        workload: currentWorkload,
         breakdown
       };
     });
@@ -206,15 +205,14 @@ router.get('/overloaded', authenticateToken, async (req, res) => {
 
     const overloadedEmployees = employees.map(emp => {
       const empTasks = tasks.filter(t => t.assignedTo === emp.userId);
-      const currentLoad = empTasks.length;
-      const workload = Math.round((currentLoad / (emp.capacity || 50)) * 100);
+      const workload = Math.round(emp.workload || 0);
       
       return {
         userId: emp.userId,
         name: emp.name,
         workload,
         capacity: emp.capacity || 50,
-        currentLoad,
+        currentLoad: empTasks.length,
         stressLevel: emp.stressLevel
       };
     }).filter(e => e.workload > 80);

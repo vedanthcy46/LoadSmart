@@ -34,8 +34,10 @@ export default function TaskCard({ task, onStatusChange }) {
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
-            <StatusIcon className={`w-4 h-4 ${statusColors[task.status] || ''}`} />
-            <h3 className="font-semibold text-slate-800">{task.title}</h3>
+            <StatusIcon className={`w-4 h-4 ${isOffloaded ? 'text-slate-300' : (statusColors[task.status] || '')}`} />
+            <h3 className={`font-semibold ${isOffloaded ? 'text-slate-400' : 'text-slate-800'}`}>
+              {task.title} {isOffloaded && <span className="text-[10px] font-normal italic">(Reassigned)</span>}
+            </h3>
           </div>
           {task.description && (
             <p className="text-sm text-slate-500 line-clamp-2">{task.description}</p>

@@ -27,11 +27,7 @@ router.get('/stats', async (req, res) => {
         }, 0) / totalEmployees)
       : 0;
 
-    const overloadedCount = employees.filter(e => {
-      const empActiveTasks = tasks.filter(t => t.assignedTo === e.userId && (t.status === 'Pending' || t.status === 'In Progress')).length;
-      const dynWorkload = Math.round((empActiveTasks / (e.capacity || 50)) * 100);
-      return dynWorkload > 80;
-    }).length;
+    const overloadedCount = employees.filter(e => (e.workload || 0) > 80).length;
 
     const teamStats = { totalEmployees, totalTasks, completedTasks, avgProductivity, overloadedCount };
     const aiInsights = await generateProductivityInsights(teamStats);
@@ -61,10 +57,10 @@ router.get('/team-overview', async (req, res) => {
         t.assignedTo === employee.userId
       );
       const activeTasks = employeeTasks.filter(t => t.status === 'Pending' || t.status === 'In Progress').length;
-      const dynamicWorkload = Math.round((activeTasks / (employee.capacity || 50)) * 100);
+      const currentWorkload = Math.round(employee.workload || 0);
       const completedCount = employeeTasks.filter(t => t.status === 'Completed').length;
       const productivityScore = calculateProductivityScore(completedCount, employeeTasks.length);
-      const workloadStatus = getWorkloadStatus(dynamicWorkload);
+      const workloadStatus = getWorkloadStatus(currentWorkload);
 
       return {
         _id: employee._id,
@@ -73,7 +69,7 @@ router.get('/team-overview', async (req, res) => {
         skills: employee.skills,
         performanceScore: employee.performanceScore,
         capacity: employee.capacity,
-        workload: dynamicWorkload,
+        workload: currentWorkload,
         workloadStatus,
         productivityScore,
         taskCount: employeeTasks.length,
@@ -98,11 +94,10 @@ router.get('/workload-distribution', async (req, res) => {
     let low = 0, balanced = 0, overloaded = 0;
 
     employees.forEach(e => {
-      const activeTasks = tasks.filter(t => t.assignedTo === e.userId).length;
-      const dynamicWorkload = Math.round((activeTasks / (e.capacity || 50)) * 100);
+      const currentWorkload = e.workload || 0;
       
-      if (dynamicWorkload < 40) low++;
-      else if (dynamicWorkload <= 80) balanced++;
+      if (currentWorkload < 40) low++;
+      else if (currentWorkload <= 80) balanced++;
       else overloaded++;
     });
 
