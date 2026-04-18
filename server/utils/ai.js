@@ -105,8 +105,8 @@ Analyze and:
 1. Split the task based on required skills if it makes sense (e.g., frontend work vs styling vs backend).
 2. Distribute work fairly among employees based on:
    * skill match
-   * workload (currentLoad vs capacity)
-   * stress level (Avoid 4-5, prefer 1-3)
+   * workload (ONLY assign if workload < 80%)
+   * stress level (ONLY assign if stress level <= 3)
 3. Ensure the total hours assigned across all employees equals ${estimatedHours}.
 
 Return ONLY structured JSON in this format:
@@ -261,5 +261,47 @@ Return ONLY structured JSON in this format:
   } catch (error) {
     console.error('Groq API Error in reassignment:', error.message);
     return [];
+  }
+};
+
+export const generateWorkloadSuggestion = async (metrics) => {
+  const prompt = `You are a workforce optimization AI.
+
+Employee Data:
+* Productivity Score: ${metrics.productivityScore}
+* Workload: ${metrics.workload}%
+* Stress Level: ${metrics.stressLevel}
+* Completed Tasks: ${metrics.completedTasks}
+* Pending Tasks: ${metrics.pendingTasks}
+
+Decide:
+1. Should workload increase, decrease, or stay same?
+2. Suggest new capacity (in hours)
+3. Give short reason
+
+Return ONLY structured JSON in this format:
+{
+  "suggestion": "increase_load" | "decrease_load" | "maintain",
+  "recommendedCapacity": number,
+  "reason": "..."
+}`;
+
+  try {
+    const response = await groq.chat.completions.create({
+      model: GROQ_MODEL,
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.1,
+      max_tokens: 300
+    });
+
+    const aiResponse = response.choices[0].message.content.trim();
+    const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]);
+    }
+    return { suggestion: "maintain", recommendedCapacity: 8, reason: "Unable to parse AI suggestion." };
+  } catch (error) {
+    console.error('Groq API Error in workload suggestion:', error.message);
+    return { suggestion: "maintain", recommendedCapacity: 8, reason: "AI service unavailable." };
   }
 };

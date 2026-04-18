@@ -3,6 +3,7 @@ import User from '../models/User.js';
 import Task from '../models/Task.js';
 import { getWorkloadStatus, calculateProductivityScore } from '../utils/allocator.js';
 import { authenticateToken } from '../middleware/auth.js';
+import { refreshWorkload } from '../utils/workload.js';
 
 const router = express.Router();
 
@@ -113,7 +114,10 @@ router.post('/', authenticateToken, async (req, res) => {
       password,
       role: role || 'employee',
       skills: skills || [],
-      capacity: capacity || 50
+      capacity: capacity || 6,
+      currentLoad: 0,
+      workload: 0,
+      currentLoadHours: 0
     });
 
     await user.save();
@@ -165,6 +169,11 @@ router.put('/:id', authenticateToken, async (req, res) => {
 
     await user.save();
     console.log(`[User Update Debug] User ${req.params.id} updated successfully`);
+
+    // 🔥 RECALCULATE WORKLOAD IF CAPACITY CHANGED
+    if (capacity) {
+      await refreshWorkload(user.userId);
+    }
 
     const response = user.toObject();
     delete response.password;
@@ -268,6 +277,39 @@ router.post('/:id/badge', authenticateToken, async (req, res) => {
     }
 
     res.json({ message: 'Badge awarded successfully', badges: user.badges });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get AI Workload Suggestion (Admin only)
+router.get('/:id/workload-suggestion', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const user = await User.findOne({ userId: req.params.id });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const tasks = await Task.find({ assignedTo: user.userId });
+    const pendingTasks = tasks.filter(t => t.status !== 'Completed').length;
+    const completedTasks = tasks.filter(t => t.status === 'Completed').length;
+
+    const metrics = {
+      productivityScore: user.productivityScore || 50,
+      workload: user.workload || 0,
+      stressLevel: user.stressLevel || 1,
+      completedTasks,
+      pendingTasks
+    };
+
+    const { generateWorkloadSuggestion } = await import('../utils/ai.js');
+    const suggestion = await generateWorkloadSuggestion(metrics);
+
+    res.json(suggestion);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

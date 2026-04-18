@@ -5,36 +5,9 @@ import { createNotification } from './notifications.js';
 import { findBestEmployee } from '../utils/allocator.js';
 import { generateTaskAllocationExplanation, generateManagerSuggestion, generateAITaskAssignment } from '../utils/ai.js';
 import { authenticateToken } from '../middleware/auth.js';
+import { refreshWorkload } from '../utils/workload.js';
 
 const router = express.Router();
-
-// Helper to recalculate employee workload and status
-const refreshWorkload = async (userId) => {
-  if (!userId) return;
-  try {
-    const user = await User.findOne({ userId });
-    if (!user) return;
-
-    const activeTasks = await Task.find({ 
-      assignedTo: userId, 
-      status: { $in: ['Pending', 'In Progress', 'Under Review'] } 
-    });
-
-    // Each hour of estimated work adds 2.5% to workload (40 hours = 100%)
-    const totalHours = activeTasks.reduce((sum, t) => sum + (t.estimatedHours || 0), 0);
-    user.workload = Math.min(100, totalHours * 2.5);
-    user.currentLoad = activeTasks.length;
-
-    if (user.workload > 80) user.status = 'overloaded';
-    else if (user.workload > 40) user.status = 'busy';
-    else user.status = 'available';
-
-    await user.save();
-    console.log(`[Workload Sync] Updated ${userId}: ${user.workload}% (${activeTasks.length} tasks)`);
-  } catch (err) {
-    console.error(`[Workload Sync] Failed for ${userId}:`, err);
-  }
-};
 
 router.get('/', authenticateToken, async (req, res) => {
   try {
@@ -357,13 +330,21 @@ router.put('/:id/status', authenticateToken, async (req, res) => {
       const employee = await User.findOne({ userId: task.assignedTo });
       if (employee) {
         employee.completedTasks += 1;
-        employee.workload = Math.max(0, employee.workload - (task.estimatedHours * 5));
-        if (employee.workload < 40) {
-          employee.status = 'available';
-        } else if (employee.workload <= 80) {
-          employee.status = 'busy';
+        
+        // 🔄 AUTO CAPACITY ADJUSTMENT
+        // Case 1: High Performer
+        if (employee.productivityScore > 80 && employee.stressLevel < 3 && employee.workload < 70) {
+          employee.capacity = Math.min(20, (employee.capacity || 8) + 1); // Max 20 hours
+          console.log(`[Capacity] Increased for ${employee.userId} (High Performance)`);
+        } 
+        // Case 2: Overloaded/Stressed
+        else if (employee.workload > 85 && employee.stressLevel > 3) {
+          employee.capacity = Math.max(2, (employee.capacity || 8) - 1); // Min 2 hours
+          console.log(`[Capacity] Reduced for ${employee.userId} (Overloaded/Stressed)`);
         }
+
         await employee.save();
+        await refreshWorkload(task.assignedTo);
       }
     }
 

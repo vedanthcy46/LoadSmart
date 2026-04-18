@@ -13,8 +13,9 @@ const userSchema = new mongoose.Schema({
   },
   skills: [{ type: String }],
   performanceScore: { type: Number, default: 50 },
-  capacity: { type: Number, required: true, min: 1, max: 100 },
+  capacity: { type: Number, required: true, min: 1, max: 100, default: 8 },
   currentLoad: { type: Number, default: 0 },
+  currentLoadHours: { type: Number, default: 0 },
   workload: { type: Number, default: 0 },
   completedTasks: { type: Number, default: 0 },
   totalTasks: { type: Number, default: 0 },
@@ -24,7 +25,7 @@ const userSchema = new mongoose.Schema({
   stressAIAnalysis: { type: String, default: '' },
   status: {
     type: String,
-    enum: ['available', 'busy', 'overloaded'],
+    enum: ['available', 'busy', 'balanced', 'overloaded'],
     default: 'available'
   },
   badges: [{ type: String }],
