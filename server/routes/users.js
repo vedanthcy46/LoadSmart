@@ -37,12 +37,14 @@ router.get('/:id', authenticateToken, async (req, res) => {
 
 // Create new user (Admin only)
 router.post('/', authenticateToken, async (req, res) => {
+  console.log('[User Create Debug] Incoming POST request from:', req.user.id);
   try {
     if (req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Access denied' });
     }
 
     const { name, email, password, role, skills, capacity, userId } = req.body;
+    console.log('[User Create Debug] Request Body:', { name, email, role, userId });
 
     // Validation
     if (!name || !email || (!password && req.body.password !== undefined)) {
@@ -52,7 +54,17 @@ router.post('/', authenticateToken, async (req, res) => {
     // Check if email already exists
     const existingEmail = await User.findOne({ email });
     if (existingEmail) {
+      console.log('[User Create Debug] Email already exists:', email);
       return res.status(400).json({ error: 'Email already exists' });
+    }
+
+    // Check if userId already exists (if provided)
+    if (userId) {
+      const existingUser = await User.findOne({ userId });
+      if (existingUser) {
+        console.log('[User Create Debug] User ID already exists:', userId);
+        return res.status(400).json({ error: 'User ID already exists' });
+      }
     }
 
     // Auto-generate userId if not provided
@@ -62,42 +74,41 @@ router.post('/', authenticateToken, async (req, res) => {
       finalUserId = (role === 'admin' ? 'ADM' : 'EMP') + (count + 1).toString().padStart(3, '0');
     }
 
-    // Check if userId already exists
-    const existingUser = await User.findOne({ userId: finalUserId });
-    if (existingUser) {
-      return res.status(400).json({ error: 'User ID already exists' });
-    }
-
     const user = new User({
       userId: finalUserId,
       name,
-      password, // Model pre-save hashes this
+      email,
+      password,
       role: role || 'employee',
       skills: skills || [],
-      capacity: Number(capacity)
+      capacity: capacity || 50
     });
 
     await user.save();
-    
+    console.log('[User Create Debug] User created successfully:', finalUserId);
+
     const response = user.toObject();
     delete response.password;
     res.status(201).json(response);
   } catch (error) {
+    console.error('[User Create Debug] Error:', error);
     res.status(400).json({ error: error.message });
   }
 });
 
 // Update user (Admin or Self)
 router.put('/:id', authenticateToken, async (req, res) => {
-  console.log(`[User Update Debug] Updating user: ${req.params.id}`);
+  console.log(`[User Update Debug] Updating user: ${req.params.id} (Request from: ${req.user.id})`);
   try {
     // Permission check: Admin or the user themselves
     if (req.user.role !== 'admin' && req.user.id !== req.params.id) {
-      console.log(`[User Update Debug] Access denied for user: ${req.user.id}`);
+      console.log(`[User Update Debug] Access denied for user: ${req.user.id} trying to edit ${req.params.id}`);
       return res.status(403).json({ error: 'Access denied' });
     }
 
     const { name, password, skills, capacity, email } = req.body;
+    console.log(`[User Update Debug] Payload for ${req.params.id}:`, { name, email, skillsCount: skills?.length });
+
     const user = await User.findOne({ userId: req.params.id });
 
     if (!user) {
@@ -107,7 +118,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
 
     if (name) user.name = name;
     if (email) user.email = email;
-    if (password) user.password = password; // Model pre-save hashes this
+    if (password) user.password = password; 
     if (skills) user.skills = skills;
     if (capacity) user.capacity = Number(capacity);
 
