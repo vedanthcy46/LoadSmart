@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { HeartPulse, Loader2, X } from 'lucide-react';
 import TaskCard from '../components/TaskCard';
 import { taskAPI, aiAPI, feedbackAPI, dashboardAPI } from '../services/api';
-import { MessageSquare, Trophy, Send, CheckCircle2 } from 'lucide-react';
+import { MessageSquare, Trophy, Send, CheckCircle2, Sparkles } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSearch } from '../contexts/SearchContext';
 
@@ -76,19 +76,21 @@ export default function MyTasks() {
     }
   };
 
+  const [aiTips, setAiTips] = useState([]);
+
   const handleFeedbackSubmit = async (e) => {
     e.preventDefault();
     if (!feedback.trim()) return;
     
     setSubmittingFeedback(true);
     try {
-      await feedbackAPI.submit({
-        employeeId: user.userId || user.id,
+      const { data } = await feedbackAPI.submit({
         message: feedback,
         stressLevel: stressForm.stressLevel
       });
       setFeedback('');
       setFeedbackSuccess(true);
+      setAiTips(data.aiTips || []);
       setTimeout(() => setFeedbackSuccess(false), 3000);
     } catch (error) {
       console.error('Failed to submit feedback:', error);
@@ -120,7 +122,8 @@ export default function MyTasks() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 sticky top-16 bg-slate-50/95 backdrop-blur-sm z-30 py-4 border-b border-slate-200/50 mb-10">
+      <div className="sticky top-[64px] bg-slate-50 z-30 py-4 border-b border-slate-200 mb-10 -mx-4 md:-mx-6 px-4 md:px-6">
+        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">My Tasks</h1>
           <p className="text-slate-500">Manage and track your assigned work</p>
@@ -133,6 +136,7 @@ export default function MyTasks() {
           Check Stress Level
         </button>
       </div>
+    </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Feedback Section */}
@@ -168,6 +172,28 @@ export default function MyTasks() {
               </div>
             </form>
           </div>
+
+          {aiTips.length > 0 && (
+            <div className="bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl shadow-lg border border-cyan-400 p-6 text-white animate-in slide-in-from-top duration-500">
+              <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                <Sparkles className="w-5 h-5" />
+                Personalized AI Suggestions (Private to You)
+              </h3>
+              <ul className="space-y-3">
+                {aiTips.map((tip, idx) => (
+                  <li key={idx} className="flex items-start gap-3 bg-white/10 p-3 rounded-lg backdrop-blur-md border border-white/20">
+                    <span className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                      {idx + 1}
+                    </span>
+                    <p className="text-sm font-medium">{tip}</p>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-4 text-[10px] text-cyan-100 uppercase font-bold tracking-widest text-center opacity-70">
+                Only you can see these suggestions. Admin only sees your feedback message.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Leaderboard Section */}
