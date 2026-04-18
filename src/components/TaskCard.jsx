@@ -1,6 +1,8 @@
-import { Clock, CheckCircle2, Circle, User } from 'lucide-react';
+import { Clock, CheckCircle2, Circle, User, PlayCircle } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function TaskCard({ task, onStatusChange }) {
+  const { user } = useAuth();
   const priorityColors = {
     High: 'bg-rose-100 text-rose-700 border-rose-200',
     Medium: 'bg-amber-100 text-amber-700 border-amber-200',
@@ -9,11 +11,13 @@ export default function TaskCard({ task, onStatusChange }) {
 
   const statusIcons = {
     Pending: Circle,
+    'In Progress': PlayCircle,
     Completed: CheckCircle2
   };
 
   const statusColors = {
     Pending: 'text-slate-400',
+    'In Progress': 'text-blue-500',
     Completed: 'text-emerald-500'
   };
 
@@ -71,12 +75,22 @@ export default function TaskCard({ task, onStatusChange }) {
 
       {task.status !== 'Completed' && onStatusChange && (
         <div className="flex gap-2 pt-2 border-t border-slate-100">
-          {task.status === 'Pending' && (
+          {user?.role === 'employee' && task.status === 'Pending' && (
+            <button
+              onClick={() => onStatusChange(task._id, 'In Progress')}
+              className="flex-1 px-3 py-1.5 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition-colors font-medium flex items-center justify-center gap-2"
+            >
+              <PlayCircle className="w-4 h-4" />
+              Start Task
+            </button>
+          )}
+          {user?.role === 'admin' && task.status === 'In Progress' && (
             <button
               onClick={() => onStatusChange(task._id, 'Completed')}
-              className="flex-1 px-3 py-1.5 bg-emerald-500 text-white text-sm rounded-lg hover:bg-emerald-600 transition-colors"
+              className="flex-1 px-3 py-1.5 bg-emerald-500 text-white text-sm rounded-lg hover:bg-emerald-600 transition-colors font-medium flex items-center justify-center gap-2"
             >
-              Complete
+              <CheckCircle2 className="w-4 h-4" />
+              Verify & Complete
             </button>
           )}
         </div>

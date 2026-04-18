@@ -133,6 +133,7 @@ export default function TaskAllocation() {
   };
 
   const pendingTasks = tasks.filter(t => t.status === 'Pending');
+  const inProgressTasks = tasks.filter(t => t.status === 'In Progress');
   const completedTasks = tasks.filter(t => t.status === 'Completed');
 
   return (
@@ -328,6 +329,15 @@ export default function TaskAllocation() {
             <h2 className="font-semibold text-slate-800 mb-4">Pending Tasks ({pendingTasks.length})</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {pendingTasks.slice(0, 6).map(task => (
+                <TaskCard key={task._id} task={task} onStatusChange={handleStatusChange} />
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <h2 className="font-semibold text-blue-600 mb-4">In Progress ({inProgressTasks.length})</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {inProgressTasks.slice(0, 6).map(task => (
                 <TaskCard key={task._id} task={task} onStatusChange={handleStatusChange} />
               ))}
             </div>

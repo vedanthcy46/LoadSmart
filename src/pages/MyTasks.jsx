@@ -101,6 +101,7 @@ export default function MyTasks() {
   }
 
   const pendingTasks = tasks.filter(t => t.status === 'Pending');
+  const inProgressTasks = tasks.filter(t => t.status === 'In Progress');
   const completedTasks = tasks.filter(t => t.status === 'Completed');
 
   return (
@@ -207,7 +208,7 @@ export default function MyTasks() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-slate-800">Pending Tasks</h2>
@@ -222,6 +223,25 @@ export default function MyTasks() {
             {pendingTasks.length === 0 && (
               <div className="text-center py-8 bg-slate-50 rounded-xl border border-slate-200 border-dashed">
                 <p className="text-slate-500">No pending tasks</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-slate-800">In Progress</h2>
+            <span className="px-2.5 py-1 bg-blue-50 text-blue-600 rounded-lg text-sm font-medium">
+              {inProgressTasks.length}
+            </span>
+          </div>
+          <div className="space-y-4">
+            {inProgressTasks.map(task => (
+              <TaskCard key={task._id} task={task} />
+            ))}
+            {inProgressTasks.length === 0 && (
+              <div className="text-center py-8 bg-slate-50 rounded-xl border border-slate-200 border-dashed">
+                <p className="text-slate-500">No tasks in progress</p>
               </div>
             )}
           </div>

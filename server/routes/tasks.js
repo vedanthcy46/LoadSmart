@@ -202,9 +202,14 @@ router.post('/suggest', async (req, res) => {
   }
 });
 
-router.put('/:id/status', async (req, res) => {
+router.put('/:id/status', authenticateToken, async (req, res) => {
   try {
-    const { status } = req.body; // e.g. "Completed"
+    const { status } = req.body; // e.g. "Completed", "In Progress"
+    
+    if (req.user.role === 'employee' && status === 'Completed') {
+      return res.status(403).json({ error: 'Employees cannot mark tasks as Completed. Please wait for Admin approval.' });
+    }
+
     const task = await Task.findById(req.params.id);
 
     if (!task) {

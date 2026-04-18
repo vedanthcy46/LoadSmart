@@ -260,7 +260,8 @@ export default function TeamOverview() {
                   value={newEmployee.email}
                   onChange={(e) => setNewEmployee(prev => ({ ...prev, email: e.target.value }))}
                   className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-                  required
+                  required={!editMode}
+                  placeholder={editMode && !newEmployee.email ? 'No email on record' : ''}
                 />
               </div>
 

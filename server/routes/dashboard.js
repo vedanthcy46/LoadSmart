@@ -24,7 +24,11 @@ router.get('/stats', async (req, res) => {
         }, 0) / totalEmployees)
       : 0;
 
-    const overloadedCount = employees.filter(e => e.workload > 80).length;
+    const overloadedCount = employees.filter(e => {
+      const empActiveTasks = tasks.filter(t => t.assignedTo === e.userId && (t.status === 'Pending' || t.status === 'In Progress')).length;
+      const dynWorkload = Math.round((empActiveTasks / (e.capacity || 50)) * 100);
+      return dynWorkload > 80;
+    }).length;
 
     const teamStats = { totalEmployees, totalTasks, completedTasks, avgProductivity, overloadedCount };
     const aiInsights = await generateProductivityInsights(teamStats);
@@ -53,9 +57,11 @@ router.get('/team-overview', async (req, res) => {
       const employeeTasks = tasks.filter(t =>
         t.assignedTo === employee.userId
       );
+      const activeTasks = employeeTasks.filter(t => t.status === 'Pending' || t.status === 'In Progress').length;
+      const dynamicWorkload = Math.round((activeTasks / (employee.capacity || 50)) * 100);
       const completedCount = employeeTasks.filter(t => t.status === 'Completed').length;
       const productivityScore = calculateProductivityScore(completedCount, employeeTasks.length);
-      const workloadStatus = getWorkloadStatus(employee.workload);
+      const workloadStatus = getWorkloadStatus(dynamicWorkload);
 
       return {
         _id: employee._id,
@@ -63,7 +69,8 @@ router.get('/team-overview', async (req, res) => {
         name: employee.name,
         skills: employee.skills,
         performanceScore: employee.performanceScore,
-        workload: employee.workload,
+        capacity: employee.capacity,
+        workload: dynamicWorkload,
         workloadStatus,
         productivityScore,
         taskCount: employeeTasks.length,
@@ -83,11 +90,20 @@ router.get('/workload-distribution', async (req, res) => {
   try {
     const employees = await User.find({ role: 'employee' });
 
-    const distribution = {
-      low: employees.filter(e => e.workload < 40).length,
-      balanced: employees.filter(e => e.workload >= 40 && e.workload <= 80).length,
-      overloaded: employees.filter(e => e.workload > 80).length
-    };
+    const tasks = await Task.find({ status: { $in: ['Pending', 'In Progress'] } });
+
+    let low = 0, balanced = 0, overloaded = 0;
+
+    employees.forEach(e => {
+      const activeTasks = tasks.filter(t => t.assignedTo === e.userId).length;
+      const dynamicWorkload = Math.round((activeTasks / (e.capacity || 50)) * 100);
+      
+      if (dynamicWorkload < 40) low++;
+      else if (dynamicWorkload <= 80) balanced++;
+      else overloaded++;
+    });
+
+    const distribution = { low, balanced, overloaded };
 
     res.json(distribution);
   } catch (error) {
