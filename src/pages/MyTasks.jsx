@@ -27,7 +27,20 @@ export default function MyTasks() {
   useEffect(() => {
     fetchTasks();
     fetchLeaderboard();
+    fetchMyTips();
   }, [user]);
+
+  const fetchMyTips = async () => {
+    try {
+      const { data } = await feedbackAPI.getMyTips();
+      setAllTips(data || []);
+      if (data && data.length > 0) {
+        setAiTips(data[0].aiTips || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch AI tips:', error);
+    }
+  };
 
   const fetchLeaderboard = async () => {
     try {
@@ -77,6 +90,7 @@ export default function MyTasks() {
   };
 
   const [aiTips, setAiTips] = useState([]);
+  const [allTips, setAllTips] = useState([]);
 
   const handleFeedbackSubmit = async (e) => {
     e.preventDefault();
@@ -91,6 +105,7 @@ export default function MyTasks() {
       setFeedback('');
       setFeedbackSuccess(true);
       setAiTips(data.aiTips || []);
+      fetchMyTips();
       setTimeout(() => setFeedbackSuccess(false), 3000);
     } catch (error) {
       console.error('Failed to submit feedback:', error);
@@ -174,23 +189,32 @@ export default function MyTasks() {
           </div>
 
           {aiTips.length > 0 && (
-            <div className="bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl shadow-lg border border-cyan-400 p-6 text-white animate-in slide-in-from-top duration-500">
-              <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                <Sparkles className="w-5 h-5" />
-                Personalized AI Suggestions (Private to You)
+            <div className="space-y-4 animate-in slide-in-from-top duration-500">
+              <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-cyan-600" />
+                Your AI Coaching History
               </h3>
-              <ul className="space-y-3">
-                {aiTips.map((tip, idx) => (
-                  <li key={idx} className="flex items-start gap-3 bg-white/10 p-3 rounded-lg backdrop-blur-md border border-white/20">
-                    <span className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold flex-shrink-0">
-                      {idx + 1}
-                    </span>
-                    <p className="text-sm font-medium">{tip}</p>
-                  </li>
+              <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
+                {allTips.map((session, sIdx) => (
+                  <div key={sIdx} className="min-w-[300px] flex-shrink-0 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl shadow-lg border border-cyan-400 p-5 text-white">
+                    <p className="text-[10px] font-black uppercase opacity-70 mb-3 tracking-widest">
+                      {new Date(session.createdAt).toLocaleDateString()} - Session {allTips.length - sIdx}
+                    </p>
+                    <ul className="space-y-3">
+                      {session.aiTips.map((tip, idx) => (
+                        <li key={idx} className="flex items-start gap-3 bg-white/10 p-2.5 rounded-lg border border-white/10">
+                          <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
+                            {idx + 1}
+                          </span>
+                          <p className="text-xs font-medium leading-relaxed">{tip}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 ))}
-              </ul>
-              <p className="mt-4 text-[10px] text-cyan-100 uppercase font-bold tracking-widest text-center opacity-70">
-                Only you can see these suggestions. Admin only sees your feedback message.
+              </div>
+              <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest text-center">
+                Confidential AI Guidance • Admin only sees your status, not these tips.
               </p>
             </div>
           )}

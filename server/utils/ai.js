@@ -159,3 +159,43 @@ Return ONLY structured JSON in this format:
     throw error;
   }
 };
+export const generateEmployeeTips = async (feedback, stressLevel) => {
+  const prompt = `You are a workplace productivity assistant.
+
+Employee Feedback:
+"${feedback}"
+
+Stress Level:
+${stressLevel}
+
+Your goal is to provide supportive, motivational, and actionable advice to help this employee stay focused and productive while managing their reported stress level.
+
+Give:
+* 2–3 short actionable tips
+* Focus on task completion, time management, and maintaining high performance.
+
+Return ONLY structured JSON in this format:
+{
+  "tips": ["tip1", "tip2", "tip3"]
+}`;
+
+  try {
+    const response = await groq.chat.completions.create({
+      model: GROQ_MODEL,
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.5,
+      max_tokens: 300
+    });
+
+    const aiResponse = response.choices[0].message.content.trim();
+    const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      return parsed.tips || [];
+    }
+    return ["Take a short break to clear your mind.", "Focus on one high-priority task at a time."];
+  } catch (error) {
+    console.error('Groq API Error in employee tips:', error.message);
+    return ["Take a short break to clear your mind.", "Focus on one high-priority task at a time."];
+  }
+};

@@ -38,34 +38,36 @@ export default function ProductivityAnalytics() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => navigate(-1)}
-            className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5 text-slate-600" />
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-800">Productivity Analytics</h1>
-            <p className="text-slate-500">Employee efficiency and productivity trends over time</p>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-2 bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
-          {['daily', 'weekly', 'monthly'].map((t) => (
-            <button
-              key={t}
-              onClick={() => setFilter(t)}
-              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
-                filter === t 
-                ? 'bg-amber-500 text-white shadow-sm' 
-                : 'text-slate-600 hover:bg-slate-50'
-              }`}
+      <div className="sticky top-[64px] bg-slate-50 z-30 py-4 border-b border-slate-200 mb-10 -mx-4 md:-mx-6 px-4 md:px-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => navigate(-1)}
+              className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
             >
-              {t.charAt(0).toUpperCase() + t.slice(1)}
+              <ArrowLeft className="w-5 h-5 text-slate-600" />
             </button>
-          ))}
+            <div>
+              <h1 className="text-2xl font-bold text-slate-800">Productivity Analytics</h1>
+              <p className="text-slate-500">Employee efficiency and productivity trends over time</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2 bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
+            {['daily', 'weekly', 'monthly'].map((t) => (
+              <button
+                key={t}
+                onClick={() => setFilter(t)}
+                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+                  filter === t 
+                  ? 'bg-amber-500 text-white shadow-sm' 
+                  : 'text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                {t.charAt(0).toUpperCase() + t.slice(1)}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

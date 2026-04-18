@@ -37,22 +37,24 @@ export default function OverloadedAnalytics() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => navigate(-1)}
-            className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5 text-slate-600" />
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-800">Overloaded Employees</h1>
-            <p className="text-slate-500">Employees with workload exceeding 80% capacity</p>
+      <div className="sticky top-[64px] bg-slate-50 z-30 py-4 border-b border-slate-200 mb-10 -mx-4 md:-mx-6 px-4 md:px-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => navigate(-1)}
+              className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5 text-slate-600" />
+            </button>
+            <div>
+              <h1 className="text-2xl font-bold text-slate-800">Overloaded Employees</h1>
+              <p className="text-slate-500">Employees with workload exceeding 80% capacity</p>
+            </div>
           </div>
-        </div>
-        <div className="bg-rose-100 text-rose-700 px-4 py-2 rounded-lg font-bold flex items-center gap-2">
-          <AlertTriangle className="w-5 h-5" />
-          {data.length} Critical Cases
+          <div className="bg-rose-100 text-rose-700 px-4 py-2 rounded-lg font-bold flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5" />
+            {data.length} Critical Cases
+          </div>
         </div>
       </div>
 

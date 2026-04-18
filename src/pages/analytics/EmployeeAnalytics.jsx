@@ -40,34 +40,36 @@ export default function EmployeeAnalytics() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => navigate(-1)}
-            className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5 text-slate-600" />
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-800">Employee Analytics</h1>
-            <p className="text-slate-500">In-depth insights into team composition and workload</p>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-2 bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
-          {['daily', 'weekly', 'monthly'].map((t) => (
-            <button
-              key={t}
-              onClick={() => setFilter(t)}
-              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
-                filter === t 
-                ? 'bg-cyan-500 text-white shadow-sm' 
-                : 'text-slate-600 hover:bg-slate-50'
-              }`}
+      <div className="sticky top-[64px] bg-slate-50 z-30 py-4 border-b border-slate-200 mb-10 -mx-4 md:-mx-6 px-4 md:px-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => navigate(-1)}
+              className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
             >
-              {t.charAt(0).toUpperCase() + t.slice(1)}
+              <ArrowLeft className="w-5 h-5 text-slate-600" />
             </button>
-          ))}
+            <div>
+              <h1 className="text-2xl font-bold text-slate-800">Employee Analytics</h1>
+              <p className="text-slate-500">In-depth insights into team composition and workload</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2 bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
+            {['daily', 'weekly', 'monthly'].map((t) => (
+              <button
+                key={t}
+                onClick={() => setFilter(t)}
+                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+                  filter === t 
+                  ? 'bg-cyan-500 text-white shadow-sm' 
+                  : 'text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                {t.charAt(0).toUpperCase() + t.slice(1)}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -126,6 +128,7 @@ export default function EmployeeAnalytics() {
               <tr>
                 <th className="text-left py-4 px-6 font-semibold">Name</th>
                 <th className="text-left py-4 px-6 font-semibold">Skills</th>
+                <th className="text-left py-4 px-6 font-semibold text-center">Task Breakdown</th>
                 <th className="text-left py-4 px-6 font-semibold text-center">Workload</th>
                 <th className="text-left py-4 px-6 font-semibold text-center">Stress</th>
               </tr>
@@ -151,11 +154,22 @@ export default function EmployeeAnalytics() {
                           {s}
                         </span>
                       ))}
-                      {emp.skills.length > 3 && (
-                        <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-medium">
-                          +{emp.skills.length - 3}
-                        </span>
-                      )}
+                    </div>
+                  </td>
+                  <td className="py-4 px-6">
+                    <div className="flex items-center justify-center gap-3">
+                      <div className="text-center">
+                        <p className="text-[10px] font-bold text-amber-500 uppercase">P</p>
+                        <p className="text-xs font-bold text-slate-700">{emp.taskBreakdown.pending}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-[10px] font-bold text-cyan-500 uppercase">IP</p>
+                        <p className="text-xs font-bold text-slate-700">{emp.taskBreakdown.inProgress}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-[10px] font-bold text-emerald-500 uppercase">C</p>
+                        <p className="text-xs font-bold text-slate-700">{emp.taskBreakdown.completed}</p>
+                      </div>
                     </div>
                   </td>
                   <td className="py-4 px-6 text-center">

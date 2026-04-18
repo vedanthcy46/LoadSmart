@@ -52,26 +52,43 @@ router.get('/employees', authenticateToken, async (req, res) => {
 
     // Capacity vs Workload
     const workloadData = allEmployees.map(emp => {
-      const empTasks = tasks.filter(t => t.assignedTo === emp.userId && (t.status === 'Pending' || t.status === 'In Progress'));
-      const currentLoad = empTasks.length;
+      const empTasks = tasks.filter(t => t.assignedTo === emp.userId);
+      const activeTasks = empTasks.filter(t => t.status === 'Pending' || t.status === 'In Progress');
+      const currentLoad = activeTasks.length;
+      
+      const breakdown = {
+        pending: empTasks.filter(t => t.status === 'Pending').length,
+        inProgress: empTasks.filter(t => t.status === 'In Progress').length,
+        completed: empTasks.filter(t => t.status === 'Completed').length
+      };
+
       return {
         name: emp.name,
         capacity: emp.capacity || 50,
-        workload: Math.round((currentLoad / (emp.capacity || 50)) * 100)
+        workload: Math.round((currentLoad / (emp.capacity || 50)) * 100),
+        breakdown
       };
     });
 
     res.json({
       totalEmployees: employees.length,
-      employees: employees.map(e => ({
-        userId: e.userId,
-        name: e.name,
-        email: e.email,
-        skills: e.skills,
-        capacity: e.capacity,
-        workload: e.workload,
-        stressLevel: e.stressLevel
-      })),
+      employees: employees.map(e => {
+        const empTasks = tasks.filter(t => t.assignedTo === e.userId);
+        return {
+          userId: e.userId,
+          name: e.name,
+          email: e.email,
+          skills: e.skills,
+          capacity: e.capacity,
+          workload: e.workload,
+          stressLevel: e.stressLevel,
+          taskBreakdown: {
+            pending: empTasks.filter(t => t.status === 'Pending').length,
+            inProgress: empTasks.filter(t => t.status === 'In Progress').length,
+            completed: empTasks.filter(t => t.status === 'Completed').length
+          }
+        };
+      }),
       skillsDistribution,
       workloadData
     });
