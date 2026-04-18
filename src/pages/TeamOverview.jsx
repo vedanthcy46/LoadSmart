@@ -96,11 +96,11 @@ export default function TeamOverview() {
     });
     
     try {
-      if (editMode && selectedEmployee?.userId) {
-        console.log('[Auth Debug] Attempting PUT update for:', selectedEmployee.userId);
-        await userAPI.update(selectedEmployee.userId, formData);
-      } else if (editMode && !selectedEmployee?.userId) {
-        console.error('[Auth Debug] ERROR: Edit mode is TRUE but selectedEmployee.userId is MISSING!');
+      if (editMode && formData.userId) {
+        console.log('[Auth Debug] Attempting PUT update for:', formData.userId);
+        await userAPI.update(formData.userId, formData);
+      } else if (editMode && !formData.userId) {
+        console.error('[Auth Debug] ERROR: Edit mode is TRUE but formData.userId is MISSING!');
         alert('Error: Could not identify which employee to update. Please close and try again.');
         return;
       } else {
@@ -364,6 +364,7 @@ export default function TeamOverview() {
                         capacity: selectedEmployee.capacity || 50
                       });
                       setShowAddModal(true);
+                      setSelectedEmployee(null); // Close details modal to prevent stacking
                     }}
                     className="text-xs px-2 py-1 bg-slate-100 text-slate-600 rounded hover:bg-slate-200 transition-colors"
                   >
