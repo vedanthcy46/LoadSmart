@@ -106,7 +106,7 @@ export default function MyTasks() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 sticky top-16 bg-slate-50/95 backdrop-blur-sm z-30 py-4 border-b border-slate-200/50 mb-6">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 sticky top-16 bg-slate-50/95 backdrop-blur-sm z-30 py-4 border-b border-slate-200/50 mb-10">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">My Tasks</h1>
           <p className="text-slate-500">Manage and track your assigned work</p>

@@ -138,7 +138,7 @@ export default function TaskAllocation() {
 
   return (
     <div className="space-y-6">
-      <div className="sticky top-16 bg-slate-50/95 backdrop-blur-sm z-30 py-4 border-b border-slate-200/50 mb-6">
+      <div className="sticky top-16 bg-slate-50/95 backdrop-blur-sm z-30 py-4 border-b border-slate-200/50 mb-10">
         <h1 className="text-2xl font-bold text-slate-800">Task Allocation</h1>
         <p className="text-slate-500">AI-powered smart task assignment</p>
       </div>
