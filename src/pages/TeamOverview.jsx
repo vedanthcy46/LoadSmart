@@ -486,18 +486,8 @@ export default function TeamOverview() {
                 <WorkloadIndicator workload={selectedEmployee.workload} />
               </div>
 
-              <div>
-                <p className="text-sm text-slate-500 mb-2">Performance Score</p>
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-cyan-500"
-                      style={{ width: `${selectedEmployee.performanceScore}%` }}
-                    />
-                  </div>
-                  <span className="text-sm font-medium text-slate-600">{selectedEmployee.performanceScore}%</span>
-                </div>
-              </div>
+            
+              
 
               <div>
                 <p className="text-sm text-slate-500 mb-2">Skills</p>
